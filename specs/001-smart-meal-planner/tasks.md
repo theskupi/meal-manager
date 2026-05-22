@@ -42,12 +42,12 @@ testing. Implementation order follows user direction: US2 (recipe scan) first, t
 
 **⚠️ CRITICAL**: No user story work begins until this phase is complete
 
-- [ ] T007 Create typed config module `src/config/index.ts`: read all env vars via `dotenv`, export a typed `Config` object; throw at startup if required vars are missing; include `allowedUserIds: number[]` parsed from `TELEGRAM_ALLOWED_USER_IDS`
-- [ ] T008 [P] Create Notion API client wrapper `src/integrations/notion.ts`: initialise `@notionhq/client`; wrap every API call with a 2.5 req/s token-bucket throttle and exponential backoff (1 s, 2 s, 4 s) on HTTP 429; export typed `notionClient` instance
-- [ ] T009 [P] Create Telegraf bot instance `src/integrations/telegram.ts`: initialise `telegraf` with `TELEGRAM_BOT_TOKEN`; export `bot` instance; include helper to register webhook URL when `NODE_ENV=production`
-- [ ] T010 [P] Create auth middleware `src/bot/middleware/auth.ts`: telegraf middleware that reads `config.allowedUserIds`; silently drops messages from unlisted `ctx.from.id` values; logs blocked attempts at debug level
-- [ ] T011 [P] Create barrel export files: `src/integrations/index.ts` (re-exports notionClient, bot, later geminiClient, groqClient), `src/models/index.ts` (placeholder, populated in US2+)
-- [ ] T012 Create main entry point `src/index.ts`: import bot and auth middleware; apply auth middleware (`bot.use(authMiddleware)`); call `bot.launch()` with long-poll in dev / webhook in prod; handle `SIGINT`/`SIGTERM` for graceful `bot.stop()`
+- [x] T007 Create typed config module `src/config/index.ts`: read all env vars via `dotenv`, export a typed `Config` object; throw at startup if required vars are missing; include `allowedUserIds: number[]` parsed from `TELEGRAM_ALLOWED_USER_IDS`
+- [x] T008 [P] Create Notion API client wrapper `src/integrations/notion.ts`: initialise `@notionhq/client`; wrap every API call with a 2.5 req/s token-bucket throttle and exponential backoff (1 s, 2 s, 4 s) on HTTP 429; export typed `notionClient` instance
+- [x] T009 [P] Create Telegraf bot instance `src/integrations/telegram.ts`: initialise `telegraf` with `TELEGRAM_BOT_TOKEN`; export `bot` instance; include helper to register webhook URL when `NODE_ENV=production`
+- [x] T010 [P] Create auth middleware `src/bot/middleware/auth.ts`: telegraf middleware that reads `config.allowedUserIds`; silently drops messages from unlisted `ctx.from.id` values; logs blocked attempts at debug level
+- [x] T011 [P] Create barrel export files: `src/integrations/index.ts` (re-exports notionClient, bot, later geminiClient, groqClient), `src/models/index.ts` (placeholder, populated in US2+)
+- [x] T012 Create main entry point `src/index.ts`: import bot and auth middleware; apply auth middleware (`bot.use(authMiddleware)`); call `bot.launch()` with long-poll in dev / webhook in prod; handle `SIGINT`/`SIGTERM` for graceful `bot.stop()`
 
 **Checkpoint**: Run `npm run dev` — bot should start without errors and ignore messages from non-whitelisted users
 
@@ -62,18 +62,18 @@ within 30 s; verify recipe entry exists in Notion Recipes database with ≥ 3 in
 
 ### Tests for User Story 2 ⚠️ (Write FIRST — must FAIL before implementation)
 
-- [ ] T013 [P] [US2] Write unit tests for recipe scanner in `tests/unit/recipe-scanner.test.ts`: mock Gemini and Groq clients; test happy path (valid JSON returned), Zod validation failure → Groq repair path, no-recipe response, timeout handling
-- [ ] T014 [P] [US2] Write integration tests for Gemini client in `tests/integration/gemini.test.ts`: mock `@google/generative-ai` HTTP layer; test Flash primary / Pro fallback trigger, retry on 429, base64 encoding of photo bytes
+- [x] T013 [P] [US2] Write unit tests for recipe scanner in `tests/unit/recipe-scanner.test.ts`: mock Gemini and Groq clients; test happy path (valid JSON returned), Zod validation failure → Groq repair path, no-recipe response, timeout handling
+- [x] T014 [P] [US2] Write integration tests for Gemini client in `tests/integration/gemini.test.ts`: mock `@google/generative-ai` HTTP layer; test Flash primary / Pro fallback trigger, retry on 429, base64 encoding of photo bytes
 
 ### Implementation for User Story 2
 
-- [ ] T015 [P] [US2] Create `Ingredient` and `Recipe` Zod schemas and inferred TypeScript types in `src/models/recipe.ts`; include `RecipeSchema`, `IngredientSchema`, `IngredientUnit` enum (g, kg, ml, l, cup, tbsp, tsp, piece, slice, other); update `src/models/index.ts`
-- [ ] T016 [P] [US2] Create Gemini API client `src/integrations/gemini.ts`: initialise `@google/generative-ai` with `GEMINI_API_KEY`; implement `extractRecipe(imageBase64: string): Promise<Recipe>` — use `gemini-1.5-flash` primary, fall back to `gemini-1.5-pro` when < 3 ingredients parsed; include retry logic for 429/5xx per `contracts/gemini-recipe-extraction.md`; update `src/integrations/index.ts`
-- [ ] T017 [US2] Create Groq API client `src/integrations/groq.ts`: initialise `groq-sdk` with `GROQ_API_KEY`; implement `repairJson(rawText: string): Promise<string>` using the JSON repair prompt from `contracts/gemini-recipe-extraction.md`; export stub `parseIntent` for later use in US1/US3; update `src/integrations/index.ts`
-- [ ] T018 [US2] Create recipe scanner service `src/services/recipe-scanner.ts`: implement `scanPhoto(fileId: string): Promise<Recipe>` — download highest-res photo from Telegram CDN using bot file API, base64-encode bytes, call `geminiClient.extractRecipe`, validate with `RecipeSchema.safeParse`, call `groqClient.repairJson` on parse failure and retry once, throw `ExtractionError` if still invalid
-- [ ] T019 [US2] Create recipe store service `src/services/recipe-store.ts`: implement `saveRecipe(recipe: Recipe): Promise<string>` (returns Notion page URL) and `listRecipes(page: number): Promise<Recipe[]>` (page size 10) using `notionClient` against `NOTION_RECIPES_DB_ID`; serialise `ingredients` and `steps` as JSON strings in Rich Text properties per `contracts/notion-schemas.md`
-- [ ] T020 [US2] Create photo handler `src/bot/handlers/photo.ts`: handle `bot.on('photo', ...)` — reply "📸 Got it! Scanning recipe, please wait…", call `recipeScanner.scanPhoto`, call `recipeStore.saveRecipe`, reply "✅ Recipe saved: _{title}_ ({n} ingredients). {notionUrl}"; on extraction error reply "❌ Couldn't extract a recipe from this photo. Try a clearer image."
-- [ ] T021 [US2] Create command handler `src/bot/handlers/command.ts`: implement `/scan` (prompt user to send photo), `/recipes [page]` (list recipes via recipeStore.listRecipes); register photo handler and both commands on `bot` instance in `src/index.ts`
+- [x] T015 [P] [US2] Create `Ingredient` and `Recipe` Zod schemas and inferred TypeScript types in `src/models/recipe.ts`; include `RecipeSchema`, `IngredientSchema`, `IngredientUnit` enum (g, kg, ml, l, cup, tbsp, tsp, piece, slice, other); update `src/models/index.ts`
+- [x] T016 [P] [US2] Create Gemini API client `src/integrations/gemini.ts`: initialise `@google/generative-ai` with `GEMINI_API_KEY`; implement `extractRecipe(imageBase64: string): Promise<Recipe>` — use `gemini-1.5-flash` primary, fall back to `gemini-1.5-pro` when < 3 ingredients parsed; include retry logic for 429/5xx per `contracts/gemini-recipe-extraction.md`; update `src/integrations/index.ts`
+- [x] T017 [US2] Create Groq API client `src/integrations/groq.ts`: initialise `groq-sdk` with `GROQ_API_KEY`; implement `repairJson(rawText: string): Promise<string>` using the JSON repair prompt from `contracts/gemini-recipe-extraction.md`; export stub `parseIntent` for later use in US1/US3; update `src/integrations/index.ts`
+- [x] T018 [US2] Create recipe scanner service `src/services/recipe-scanner.ts`: implement `scanPhoto(fileId: string): Promise<Recipe>` — download highest-res photo from Telegram CDN using bot file API, base64-encode bytes, call `geminiClient.extractRecipe`, validate with `RecipeSchema.safeParse`, call `groqClient.repairJson` on parse failure and retry once, throw `ExtractionError` if still invalid
+- [x] T019 [US2] Create recipe store service `src/services/recipe-store.ts`: implement `saveRecipe(recipe: Recipe): Promise<string>` (returns Notion page URL) and `listRecipes(page: number): Promise<Recipe[]>` (page size 10) using `notionClient` against `NOTION_RECIPES_DB_ID`; serialise `ingredients` and `steps` as JSON strings in Rich Text properties per `contracts/notion-schemas.md`
+- [x] T020 [US2] Create photo handler `src/bot/handlers/photo.ts`: handle `bot.on('photo', ...)` — reply "📸 Got it! Scanning recipe, please wait…", call `recipeScanner.scanPhoto`, call `recipeStore.saveRecipe`, reply "✅ Recipe saved: _{title}_ ({n} ingredients). {notionUrl}"; on extraction error reply "❌ Couldn't extract a recipe from this photo. Try a clearer image."
+- [x] T021 [US2] Create command handler `src/bot/handlers/command.ts`: implement `/scan` (prompt user to send photo), `/recipes [page]` (list recipes via recipeStore.listRecipes); register photo handler and both commands on `bot` instance in `src/index.ts`
 
 **Checkpoint**: US2 fully functional — cookbook photo → Notion recipe entry end-to-end
 

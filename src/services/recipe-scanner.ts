@@ -1,0 +1,25 @@
+import { config } from '../config';
+import { extractRecipe } from '../integrations/gemini';
+import { bot } from '../integrations/telegram';
+import { Recipe } from '../models/recipe';
+
+export { ExtractionError, NoRecipeFoundError } from '../integrations/gemini';
+
+async function downloadPhotoAsBase64(fileId: string): Promise<string> {
+  const file = await bot.telegram.getFile(fileId);
+  if (!file.file_path) {
+    throw new Error(`Could not resolve file path for file ID: ${fileId}`);
+  }
+  const url = `https://api.telegram.org/file/bot${config.telegram.botToken}/${file.file_path}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to download photo: HTTP ${response.status}`);
+  }
+  const buffer = await response.arrayBuffer();
+  return Buffer.from(buffer).toString('base64');
+}
+
+export async function scanPhoto(fileId: string): Promise<Recipe> {
+  const base64 = await downloadPhotoAsBase64(fileId);
+  return extractRecipe(base64);
+}
