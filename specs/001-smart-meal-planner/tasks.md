@@ -1,6 +1,5 @@
 ---
-
-description: "Task list for Smart Meal Planner & Automated Kitchen Assistant (PapiPap)"
+description: 'Task list for Smart Meal Planner & Automated Kitchen Assistant (PapiPap)'
 ---
 
 # Tasks: Smart Meal Planner & Automated Kitchen Assistant (PapiPap)
@@ -28,12 +27,12 @@ testing. Implementation order follows user direction: US2 (recipe scan) first, t
 
 **Purpose**: Project initialisation, tooling, and directory scaffold
 
-- [ ] T001 Initialise Node.js project in repo root: create `package.json` (name: meal-manager, engines: node >=20), `tsconfig.json` (strict: true, target: ES2022, module: commonjs, outDir: dist, rootDir: src, esModuleInterop: true), and install core runtime dependencies: `telegraf`, `@google/generative-ai`, `groq-sdk`, `@notionhq/client`, `zod`, `dotenv`
-- [ ] T002 [P] Configure ESLint + Prettier: install `eslint`, `@typescript-eslint/eslint-plugin`, `@typescript-eslint/parser`, `prettier`, `eslint-config-prettier`; create `.eslintrc.json` and `.prettierrc` at repo root
-- [ ] T003 [P] Configure Jest + ts-jest: install `jest`, `ts-jest`, `@types/jest`; create `jest.config.ts` with two projects (unit: `tests/unit/**/*.test.ts`, integration: `tests/integration/**/*.test.ts`); create empty `tests/unit/` and `tests/integration/` directories
-- [ ] T004 Create full directory structure per plan.md: `src/integrations/`, `src/models/`, `src/services/`, `src/bot/handlers/`, `src/bot/middleware/`, `src/config/`
-- [ ] T005 [P] Create `.env.example` with all required vars: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_IDS`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `NOTION_TOKEN`, `NOTION_RECIPES_DB_ID`, `NOTION_PANTRY_DB_ID`, `NOTION_MEAL_PLAN_DB_ID`, `PLAN_HORIZON_DAYS` (default 5), `PLAN_HORIZON_MAX_DAYS` (default 31), `NODE_ENV`, `TELEGRAM_WEBHOOK_URL` (prod only)
-- [ ] T006 Add npm scripts to `package.json`: `dev` (nodemon + ts-node src/index.ts), `build` (tsc), `start` (node dist/index.js), `test` (jest --testPathPattern=unit), `test:integration` (jest --testPathPattern=integration), `lint` (eslint src/)
+- [x] T001 Initialise Node.js project in repo root: create `package.json` (name: meal-manager, engines: node >=20), `tsconfig.json` (strict: true, target: ES2022, module: commonjs, outDir: dist, rootDir: src, esModuleInterop: true), and install core runtime dependencies: `telegraf`, `@google/generative-ai`, `groq-sdk`, `@notionhq/client`, `zod`, `dotenv`
+- [x] T002 [P] Configure ESLint + Prettier: install `eslint`, `@typescript-eslint/eslint-plugin`, `@typescript-eslint/parser`, `prettier`, `eslint-config-prettier`; create `.eslintrc.json` and `.prettierrc` at repo root
+- [x] T003 [P] Configure Jest + ts-jest: install `jest`, `ts-jest`, `@types/jest`; create `jest.config.ts` with two projects (unit: `tests/unit/**/*.test.ts`, integration: `tests/integration/**/*.test.ts`); create empty `tests/unit/` and `tests/integration/` directories
+- [x] T004 Create full directory structure per plan.md: `src/integrations/`, `src/models/`, `src/services/`, `src/bot/handlers/`, `src/bot/middleware/`, `src/config/`
+- [x] T005 [P] Create `.env.example` with all required vars: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_IDS`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `NOTION_TOKEN`, `NOTION_RECIPES_DB_ID`, `NOTION_PANTRY_DB_ID`, `NOTION_MEAL_PLAN_DB_ID`, `PLAN_HORIZON_DAYS` (default 5), `PLAN_HORIZON_MAX_DAYS` (default 31), `NODE_ENV`, `TELEGRAM_WEBHOOK_URL` (prod only)
+- [x] T006 Add npm scripts to `package.json`: `dev` (nodemon + ts-node src/index.ts), `build` (tsc), `start` (node dist/index.js), `test` (jest --testPathPattern=unit), `test:integration` (jest --testPathPattern=integration), `lint` (eslint src/)
 
 ---
 
@@ -73,7 +72,7 @@ within 30 s; verify recipe entry exists in Notion Recipes database with ≥ 3 in
 - [ ] T017 [US2] Create Groq API client `src/integrations/groq.ts`: initialise `groq-sdk` with `GROQ_API_KEY`; implement `repairJson(rawText: string): Promise<string>` using the JSON repair prompt from `contracts/gemini-recipe-extraction.md`; export stub `parseIntent` for later use in US1/US3; update `src/integrations/index.ts`
 - [ ] T018 [US2] Create recipe scanner service `src/services/recipe-scanner.ts`: implement `scanPhoto(fileId: string): Promise<Recipe>` — download highest-res photo from Telegram CDN using bot file API, base64-encode bytes, call `geminiClient.extractRecipe`, validate with `RecipeSchema.safeParse`, call `groqClient.repairJson` on parse failure and retry once, throw `ExtractionError` if still invalid
 - [ ] T019 [US2] Create recipe store service `src/services/recipe-store.ts`: implement `saveRecipe(recipe: Recipe): Promise<string>` (returns Notion page URL) and `listRecipes(page: number): Promise<Recipe[]>` (page size 10) using `notionClient` against `NOTION_RECIPES_DB_ID`; serialise `ingredients` and `steps` as JSON strings in Rich Text properties per `contracts/notion-schemas.md`
-- [ ] T020 [US2] Create photo handler `src/bot/handlers/photo.ts`: handle `bot.on('photo', ...)` — reply "📸 Got it! Scanning recipe, please wait…", call `recipeScanner.scanPhoto`, call `recipeStore.saveRecipe`, reply "✅ Recipe saved: *{title}* ({n} ingredients). {notionUrl}"; on extraction error reply "❌ Couldn't extract a recipe from this photo. Try a clearer image."
+- [ ] T020 [US2] Create photo handler `src/bot/handlers/photo.ts`: handle `bot.on('photo', ...)` — reply "📸 Got it! Scanning recipe, please wait…", call `recipeScanner.scanPhoto`, call `recipeStore.saveRecipe`, reply "✅ Recipe saved: _{title}_ ({n} ingredients). {notionUrl}"; on extraction error reply "❌ Couldn't extract a recipe from this photo. Try a clearer image."
 - [ ] T021 [US2] Create command handler `src/bot/handlers/command.ts`: implement `/scan` (prompt user to send photo), `/recipes [page]` (list recipes via recipeStore.listRecipes); register photo handler and both commands on `bot` instance in `src/index.ts`
 
 **Checkpoint**: US2 fully functional — cookbook photo → Notion recipe entry end-to-end
