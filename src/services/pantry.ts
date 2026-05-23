@@ -2,7 +2,7 @@ import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
 import { config } from '../config';
 import { notionClient, withRetry } from '../integrations/notion';
 import { PantryItem, PantryItemInput } from '../models/pantry-item';
-import { Ingredient, IngredientUnit, IngredientUnitSchema } from '../models/recipe';
+import { convertToUnit, Ingredient, IngredientUnit, IngredientUnitSchema } from '../models/recipe';
 
 type NotionProperties = Parameters<typeof notionClient.pages.create>[0]['properties'];
 
@@ -51,11 +51,19 @@ export async function upsertItem(item: PantryItemInput): Promise<PantryItem> {
 
   if (existing) {
     const existingItem = parsePantryPage(existing);
-    const newQuantity = (existingItem?.quantity ?? 0) + item.quantity;
+    const storedUnit = existingItem?.unit ?? item.unit;
+    const storedQty = existingItem?.quantity ?? 0;
+
+    const converted = convertToUnit(item.quantity, item.unit, storedUnit);
+    if (converted === null) {
+      throw new Error(
+        `Unit mismatch: cannot add ${item.unit} to existing pantry item stored in ${storedUnit}`,
+      );
+    }
+    const newQuantity = storedQty + converted;
 
     const properties: NotionProperties = {
       Quantity: { number: newQuantity },
-      Unit: { select: { name: item.unit } },
     };
     if (item.expiryDate) {
       properties['Expiry Date'] = { date: { start: item.expiryDate } };
@@ -73,7 +81,7 @@ export async function upsertItem(item: PantryItemInput): Promise<PantryItem> {
         id: existing.id,
         name: normalizedName,
         quantity: newQuantity,
-        unit: item.unit,
+        unit: storedUnit,
         expiryDate: item.expiryDate,
         minThreshold: item.minThreshold,
         updatedAt: new Date().toISOString(),
@@ -151,7 +159,15 @@ export async function deductByMeal(ingredients: Ingredient[]): Promise<void> {
     const item = parsePantryPage(existing);
     if (!item) continue;
 
-    const newQuantity = Math.max(0, item.quantity - (ingredient.quantity ?? 0));
+    const incomingQty = ingredient.quantity ?? 0;
+    const converted = convertToUnit(incomingQty, ingredient.unit, item.unit);
+    if (converted === null) {
+      console.warn(
+        `[pantry] deductByMeal: skipping ${ingredient.name} — unit mismatch (pantry: ${item.unit}, ingredient: ${ingredient.unit})`,
+      );
+      continue;
+    }
+    const newQuantity = Math.max(0, item.quantity - converted);
     await withRetry(() =>
       notionClient.pages.update({
         page_id: existing.id,

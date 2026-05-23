@@ -35,6 +35,7 @@ import {
   checkExpiry,
   checkThresholds,
 } from '../../src/services/pantry';
+import { convertToUnit } from '../../src/models/recipe';
 
 const mockQuery = notionClient.databases.query as jest.Mock;
 const mockCreate = notionClient.pages.create as jest.Mock;
@@ -271,5 +272,117 @@ describe('checkThresholds', () => {
     const result = await checkThresholds();
 
     expect(result).toHaveLength(0);
+  });
+});
+
+describe('convertToUnit', () => {
+  it('returns same value when units are equal', () => {
+    expect(convertToUnit(500, 'g', 'g')).toBe(500);
+    expect(convertToUnit(1, 'l', 'l')).toBe(1);
+  });
+
+  it('converts kg to g', () => {
+    expect(convertToUnit(0.5, 'kg', 'g')).toBe(500);
+  });
+
+  it('converts g to kg', () => {
+    expect(convertToUnit(1000, 'g', 'kg')).toBe(1);
+  });
+
+  it('converts l to ml', () => {
+    expect(convertToUnit(1, 'l', 'ml')).toBe(1000);
+  });
+
+  it('converts ml to l', () => {
+    expect(convertToUnit(500, 'ml', 'l')).toBe(0.5);
+  });
+
+  it('converts tbsp to ml', () => {
+    expect(convertToUnit(2, 'tbsp', 'ml')).toBe(30);
+  });
+
+  it('converts cup to ml', () => {
+    expect(convertToUnit(1, 'cup', 'ml')).toBe(240);
+  });
+
+  it('returns null for incompatible unit families (mass vs volume)', () => {
+    expect(convertToUnit(100, 'g', 'ml')).toBeNull();
+    expect(convertToUnit(1, 'l', 'kg')).toBeNull();
+  });
+
+  it('returns null for units with no conversion factor (piece, other)', () => {
+    expect(convertToUnit(1, 'piece', 'g')).toBeNull();
+    expect(convertToUnit(1, 'other', 'ml')).toBeNull();
+  });
+});
+
+describe('upsertItem — mixed unit handling', () => {
+  it('converts kg into g when existing item is stored in g (500 g + 0.5 kg = 1000 g)', async () => {
+    mockQuery.mockResolvedValueOnce(
+      queryResult(makePage('page-chicken', 'chicken breast', 500, 'g')),
+    );
+    mockUpdate.mockResolvedValueOnce(makePage('page-chicken', 'chicken breast', 1000, 'g'));
+
+    const result = await upsertItem({ name: 'chicken breast', quantity: 0.5, unit: 'kg' });
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        page_id: 'page-chicken',
+        properties: expect.objectContaining({
+          Quantity: { number: 1000 },
+        }),
+      }),
+    );
+    expect(result.unit).toBe('g');
+    expect(result.quantity).toBe(1000);
+  });
+
+  it('does not overwrite the stored unit when adding a compatible unit', async () => {
+    mockQuery.mockResolvedValueOnce(queryResult(makePage('page-oil', 'olive oil', 200, 'ml')));
+    mockUpdate.mockResolvedValueOnce(makePage('page-oil', 'olive oil', 215, 'ml'));
+
+    await upsertItem({ name: 'olive oil', quantity: 1, unit: 'tbsp' });
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        properties: expect.objectContaining({
+          Quantity: { number: 215 },
+        }),
+      }),
+    );
+    expect(mockUpdate.mock.calls[0][0].properties).not.toHaveProperty('Unit');
+  });
+
+  it('throws an error when units are incompatible (g vs ml)', async () => {
+    mockQuery.mockResolvedValueOnce(queryResult(makePage('page-flour', 'flour', 500, 'g')));
+
+    await expect(upsertItem({ name: 'flour', quantity: 100, unit: 'ml' })).rejects.toThrow(
+      /unit mismatch/i,
+    );
+  });
+});
+
+describe('deductByMeal — mixed unit handling', () => {
+  it('converts kg to g before deducting (1000 g pantry - 0.4 kg = 600 g)', async () => {
+    mockQuery.mockResolvedValueOnce(queryResult(makePage('page-pasta', 'pasta', 1000, 'g')));
+    mockUpdate.mockResolvedValueOnce(makePage('page-pasta', 'pasta', 600, 'g'));
+
+    await deductByMeal([{ name: 'pasta', quantity: 0.4, unit: 'kg', notes: null }]);
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        properties: expect.objectContaining({
+          Quantity: { number: 600 },
+        }),
+      }),
+    );
+  });
+
+  it('skips ingredient with incompatible units and does not update', async () => {
+    mockQuery.mockResolvedValueOnce(queryResult(makePage('page-sugar', 'sugar', 500, 'g')));
+
+    await deductByMeal([{ name: 'sugar', quantity: 100, unit: 'ml', notes: null }]);
+
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });
