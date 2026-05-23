@@ -31,7 +31,8 @@ function parsePantryPage(page: PageObjectResponse): PantryItem | null {
   const minThreshold = thresholdProp?.number !== null ? thresholdProp?.number : undefined;
 
   const updatedAtProp = props['Last Updated'] as { last_edited_time: string } | undefined;
-  const updatedAt = updatedAtProp?.last_edited_time ?? page.last_edited_time ?? new Date().toISOString();
+  const updatedAt =
+    updatedAtProp?.last_edited_time ?? page.last_edited_time ?? new Date().toISOString();
 
   return { id: page.id, name, quantity, unit, expiryDate, minThreshold, updatedAt };
 }
@@ -46,9 +47,7 @@ export async function upsertItem(item: PantryItemInput): Promise<PantryItem> {
     }),
   );
 
-  const existing = response.results.find(
-    (p): p is PageObjectResponse => 'properties' in p,
-  );
+  const existing = response.results.find((p): p is PageObjectResponse => 'properties' in p);
 
   if (existing) {
     const existingItem = parsePantryPage(existing);
@@ -118,14 +117,20 @@ export async function listItems(): Promise<PantryItem[]> {
   const response = await withRetry(() =>
     notionClient.databases.query({
       database_id: config.notion.pantryDatabaseId,
-      sorts: [{ property: 'Expiry Date', direction: 'ascending' }],
     }),
   );
 
-  return response.results
+  const items = response.results
     .filter((p): p is PageObjectResponse => 'properties' in p)
     .map(parsePantryPage)
     .filter((p): p is PantryItem => p !== null);
+
+  return items.sort((a, b) => {
+    if (!a.expiryDate && !b.expiryDate) return 0;
+    if (!a.expiryDate) return 1;
+    if (!b.expiryDate) return -1;
+    return a.expiryDate.localeCompare(b.expiryDate);
+  });
 }
 
 export async function deductByMeal(ingredients: Ingredient[]): Promise<void> {
@@ -140,9 +145,7 @@ export async function deductByMeal(ingredients: Ingredient[]): Promise<void> {
       }),
     );
 
-    const existing = response.results.find(
-      (p): p is PageObjectResponse => 'properties' in p,
-    );
+    const existing = response.results.find((p): p is PageObjectResponse => 'properties' in p);
     if (!existing) continue;
 
     const item = parsePantryPage(existing);
@@ -158,11 +161,7 @@ export async function deductByMeal(ingredients: Ingredient[]): Promise<void> {
   }
 }
 
-export async function setThreshold(
-  name: string,
-  qty: number,
-  unit: IngredientUnit,
-): Promise<void> {
+export async function setThreshold(name: string, qty: number, unit: IngredientUnit): Promise<void> {
   const normalizedName = name.toLowerCase();
   const response = await withRetry(() =>
     notionClient.databases.query({
@@ -171,9 +170,7 @@ export async function setThreshold(
     }),
   );
 
-  const existing = response.results.find(
-    (p): p is PageObjectResponse => 'properties' in p,
-  );
+  const existing = response.results.find((p): p is PageObjectResponse => 'properties' in p);
 
   if (existing) {
     await withRetry(() =>
