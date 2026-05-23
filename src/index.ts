@@ -13,11 +13,19 @@ bot.command('ping', (ctx) => ctx.reply('pong 🏓'));
 bot.command('start', (ctx) =>
   ctx.reply(
     '👋 *PapiPap* — your kitchen assistant is running\\!\n\n' +
+      '*Recipes*\n' +
       '📸 Send a cookbook photo to scan a recipe\n' +
-      '📋 /recipes — view saved recipes\n' +
-      '🗓 /plan — meal plan _\\(coming soon\\)_\n' +
-      '🛒 /groceries — shopping list _\\(coming soon\\)_\n' +
-      '📦 /pantry — pantry stock _\\(coming soon\\)_',
+      '📋 /recipes — view saved recipes\n\n' +
+      '*Meal Planning*\n' +
+      '🗓 /plan \\[date\\] — view meal plan for a date\n' +
+      '➕ /addmeal \\<date\\> \\<type\\> \\<recipe\\> — add a meal\n' +
+      '⏭ /skip \\<date\\> \\<type\\> — skip a meal\n' +
+      '✅ /eaten \\<date\\> \\<type\\> — mark meal as eaten\n\n' +
+      '*Pantry*\n' +
+      '📦 /pantry — pantry stock\n' +
+      '➕ /addpantry \\<name\\> \\<qty\\> \\<unit\\> — add item\n' +
+      '🔔 /setthreshold \\<name\\> \\<qty\\> \\<unit\\> — restock alert\n\n' +
+      '🛒 /groceries — shopping list _\\(coming soon\\)_',
     { parse_mode: 'MarkdownV2' },
   ),
 );

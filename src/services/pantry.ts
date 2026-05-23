@@ -221,6 +221,22 @@ export async function checkExpiry(): Promise<PantryItem[]> {
     .filter((p): p is PantryItem => p !== null && p.expiryDate !== undefined);
 }
 
+export async function deleteItem(name: string): Promise<boolean> {
+  const normalizedName = name.toLowerCase();
+  const response = await withRetry(() =>
+    notionClient.databases.query({
+      database_id: config.notion.pantryDatabaseId,
+      filter: { property: 'Name', title: { equals: normalizedName } },
+    }),
+  );
+
+  const existing = response.results.find((p): p is PageObjectResponse => 'properties' in p);
+  if (!existing) return false;
+
+  await withRetry(() => notionClient.pages.update({ page_id: existing.id, archived: true }));
+  return true;
+}
+
 export async function checkThresholds(): Promise<PantryItem[]> {
   const items = await listItems();
   return items.filter(
