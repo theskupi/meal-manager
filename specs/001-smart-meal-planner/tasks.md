@@ -88,15 +88,15 @@ Notion; 48 h before expiry bot sends a recipe suggestion notification
 
 ### Tests for User Story 3 ⚠️ (Write FIRST — must FAIL before implementation)
 
-- [ ] T022 [P] [US3] Write unit tests for pantry service in `tests/unit/pantry.test.ts`: mock notionClient; test upsert (new item creates, existing item increments), deductByMeal, checkExpiry (returns items expiring within 48 h), checkThresholds (returns items below minThreshold)
+- [x] T022 [P] [US3] Write unit tests for pantry service in `tests/unit/pantry.test.ts`: mock notionClient; test upsert (new item creates, existing item increments), deductByMeal, checkExpiry (returns items expiring within 48 h), checkThresholds (returns items below minThreshold)
 
 ### Implementation for User Story 3
 
-- [ ] T023 [P] [US3] Create `PantryItem` Zod schema and TypeScript type in `src/models/pantry-item.ts`; update `src/models/index.ts`
-- [ ] T024 [US3] Create pantry service `src/services/pantry.ts`: implement `upsertItem(item: PantryItemInput)` (query-then-create-or-patch pattern per `contracts/notion-schemas.md`), `listItems(): Promise<PantryItem[]>`, `deductByMeal(ingredients: Ingredient[])`, `setThreshold(name: string, qty: number, unit: IngredientUnit)`, `checkExpiry(): Promise<PantryItem[]>` (within 48 h), `checkThresholds(): Promise<PantryItem[]>` (qty ≤ minThreshold)
-- [ ] T025 [US3] Create notifier service `src/services/notifier.ts`: implement `sendExpiryWarning(item: PantryItem, suggestionTitle: string)`, `sendRestockAlert(item: PantryItem)`, `sendMessage(text: string)` — all dispatch via `bot.telegram.sendMessage` to each whitelisted user ID; implement `runDailyChecks()` that calls `pantry.checkExpiry` and dispatches warnings (with recipe stub for now)
-- [ ] T026 [US3] Extend Groq client `src/integrations/groq.ts`: implement `parseIntent(text: string): Promise<ParsedIntent>` returning `{ intent: 'add_pantry' | 'query_schedule' | 'skip_meal' | 'query_pantry' | 'unknown', params: Record<string, unknown> }` using `llama-3.3-70b-versatile`
-- [ ] T027 [US3] Add `/addpantry` and `/pantry` command handlers in `src/bot/handlers/command.ts`; add free-form NL routing for `add_pantry` intent in `src/bot/handlers/query.ts`; create `query.ts` handler file and register `bot.on('text', queryHandler)` in `src/index.ts`; wire `runDailyChecks` on a `setInterval` (every 6 h) in `src/index.ts`
+- [x] T023 [P] [US3] Create `PantryItem` Zod schema and TypeScript type in `src/models/pantry-item.ts`; update `src/models/index.ts`
+- [x] T024 [US3] Create pantry service `src/services/pantry.ts`: implement `upsertItem(item: PantryItemInput)` (query-then-create-or-patch pattern per `contracts/notion-schemas.md`), `listItems(): Promise<PantryItem[]>`, `deductByMeal(ingredients: Ingredient[])`, `setThreshold(name: string, qty: number, unit: IngredientUnit)`, `checkExpiry(): Promise<PantryItem[]>` (within 48 h), `checkThresholds(): Promise<PantryItem[]>` (qty ≤ minThreshold)
+- [x] T025 [US3] Create notifier service `src/services/notifier.ts`: implement `sendExpiryWarning(item: PantryItem, suggestionTitle: string)`, `sendRestockAlert(item: PantryItem)`, `sendMessage(text: string)` — all dispatch via `bot.telegram.sendMessage` to each whitelisted user ID; implement `runDailyChecks()` that calls `pantry.checkExpiry` and dispatches warnings (with recipe stub for now)
+- [x] T026 [US3] Extend Groq client `src/integrations/groq.ts`: implement `parseIntent(text: string): Promise<ParsedIntent>` returning `{ intent: 'add_pantry' | 'query_schedule' | 'skip_meal' | 'query_pantry' | 'unknown', params: Record<string, unknown> }` using `llama-3.3-70b-versatile`
+- [x] T027 [US3] Add `/addpantry` and `/pantry` command handlers in `src/bot/handlers/command.ts`; add free-form NL routing for `add_pantry` intent in `src/bot/handlers/query.ts`; create `query.ts` handler file and register `bot.on('text', queryHandler)` in `src/index.ts`; wire `runDailyChecks` on a `setInterval` (every 6 h) in `src/index.ts`
 
 **Checkpoint**: US3 fully functional — pantry CRUD via bot, expiry warnings firing
 
