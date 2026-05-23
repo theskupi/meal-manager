@@ -134,3 +134,82 @@ export async function listRecipes(startCursor?: string): Promise<{
     nextCursor: response.next_cursor ?? null,
   };
 }
+
+export async function findRecipeByTitle(title: string): Promise<StoredRecipe | null> {
+  const response = await withRetry(() =>
+    notionClient.databases.query({
+      database_id: config.notion.recipesDatabaseId,
+      filter: { property: 'Title', title: { contains: title } },
+    }),
+  );
+
+  if (response.results.length === 0) return null;
+
+  const page =
+    response.results.find((p) => {
+      if (!('properties' in p)) return false;
+      const props = p.properties as unknown as Record<string, unknown>;
+      const titleProp = props['Title'] as { title: Array<{ plain_text: string }> } | undefined;
+      const pageTitle = (titleProp?.title ?? []).map((t) => t.plain_text).join('');
+      return pageTitle.toLowerCase() === title.toLowerCase();
+    }) ?? response.results[0];
+
+  if (!page || !('properties' in page)) return null;
+
+  const fullPage = page as unknown as PageObjectResponse;
+  const props = fullPage.properties as unknown as Record<string, unknown>;
+
+  const titleProp = props['Title'] as { title: Array<{ plain_text: string }> } | undefined;
+  const recipeTitle = (titleProp?.title ?? []).map((t) => t.plain_text).join('');
+
+  const ingredientsProp = props['Ingredients'] as
+    | { rich_text: Array<{ plain_text: string }> }
+    | undefined;
+  const ingredientsRaw = (ingredientsProp?.rich_text ?? []).map((r) => r.plain_text).join('');
+
+  const stepsProp = props['Steps'] as { rich_text: Array<{ plain_text: string }> } | undefined;
+  const stepsRaw = (stepsProp?.rich_text ?? []).map((r) => r.plain_text).join('') || '[]';
+
+  const servingsProp = props['Servings'] as { number: number } | undefined;
+  const servings = servingsProp?.number ?? 4;
+
+  const prepTimeProp = props['Prep Time (min)'] as { number: number | null } | undefined;
+  const prepTime = prepTimeProp?.number ?? null;
+
+  const tagsProp = props['Tags'] as { multi_select: Array<{ name: string }> } | undefined;
+  const tags = (tagsProp?.multi_select ?? []).map((t) => t.name);
+
+  let ingredients: unknown[] = [];
+  let steps: unknown[] = [];
+  try {
+    ingredients = JSON.parse(ingredientsRaw) as unknown[];
+    steps = JSON.parse(stepsRaw) as unknown[];
+  } catch {
+    return null;
+  }
+
+  const normalised = ingredients.map((ing) => {
+    const i = ing as Record<string, unknown>;
+    const unitResult = IngredientUnitSchema.safeParse(i['unit']);
+    return {
+      name: String(i['name'] ?? ''),
+      quantity: Number(i['quantity'] ?? 0),
+      unit: unitResult.success ? unitResult.data : ('other' as const),
+      notes: i['notes'] != null ? String(i['notes']) : null,
+    };
+  });
+
+  const result = StoredRecipeSchema.safeParse({
+    id: page.id,
+    title: recipeTitle,
+    servings,
+    prepTimeMinutes: prepTime,
+    ingredients: normalised,
+    steps: steps.map(String),
+    tags,
+    notionUrl: 'url' in fullPage ? fullPage.url : undefined,
+    createdAt: fullPage.created_time,
+  });
+
+  return result.success ? result.data : null;
+}

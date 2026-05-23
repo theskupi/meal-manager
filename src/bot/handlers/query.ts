@@ -1,8 +1,41 @@
 import { Context } from 'telegraf';
+import { config } from '../../config';
 import { parseIntent } from '../../integrations/groq';
-import { upsertItem, listItems, checkExpiry } from '../../services/pantry';
+import { upsertItem, listItems, checkExpiry, deleteItem } from '../../services/pantry';
+import { getByDate, getWeekPlan, skipMeal } from '../../services/meal-planner';
 import { PantryItemInputSchema } from '../../models/pantry-item';
 import { IngredientUnitSchema } from '../../models/recipe';
+import { MealEntry, MealTypeSchema } from '../../models/meal-plan';
+
+function todayIso(): string {
+  return new Date().toISOString().split('T')[0] as string;
+}
+
+function resolveDate(raw: unknown): string {
+  if (typeof raw !== 'string' || !raw) return todayIso();
+  const lower = raw.toLowerCase().trim();
+  if (lower === 'today') return todayIso();
+  if (lower === 'tomorrow') {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0] as string;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  return todayIso();
+}
+
+function formatDateShort(iso: string): string {
+  return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+function formatMealLine(e: MealEntry): string {
+  const type = e.mealType.charAt(0).toUpperCase() + e.mealType.slice(1);
+  const suffix = e.status !== 'planned' ? ` — _${e.status}_` : '';
+  return `• ${type}: ${e.recipeTitle} (${e.servings} servings)${suffix}`;
+}
 
 export async function queryHandler(ctx: Context): Promise<void> {
   if (!ctx.message || !('text' in ctx.message)) return;
@@ -36,8 +69,14 @@ export async function queryHandler(ctx: Context): Promise<void> {
       });
 
       if (!inputResult.success) {
+        console.warn(
+          '[query-handler] add_pantry Zod validation failed. Groq params:',
+          JSON.stringify(p),
+          '| Errors:',
+          inputResult.error.flatten(),
+        );
         await ctx.reply(
-          "❌ I couldn't parse the pantry item from that. Try: \"Added 500g chicken breast\" or use /addpantry.",
+          '❌ I couldn\'t parse the pantry item from that. Try: "Added 500g chicken breast" or use /addpantry.',
         );
         return;
       }
@@ -55,10 +94,39 @@ export async function queryHandler(ctx: Context): Promise<void> {
       break;
     }
 
+    case 'remove_pantry': {
+      const p = parsed.params as Record<string, unknown>;
+      const nameRaw = p['name'] ?? p['item'] ?? p['ingredient'];
+      if (typeof nameRaw !== 'string' || !nameRaw.trim()) {
+        await ctx.reply(
+          '❌ I couldn\'t work out which item to remove. Try: "Remove pasta from pantry" or use /removepantry.',
+        );
+        break;
+      }
+
+      try {
+        const removed = await deleteItem(nameRaw.trim());
+        if (removed) {
+          await ctx.reply(`✅ Removed *${nameRaw.trim()}* from pantry.`, {
+            parse_mode: 'Markdown',
+          });
+        } else {
+          await ctx.reply(`❌ *${nameRaw.trim()}* not found in pantry.`, {
+            parse_mode: 'Markdown',
+          });
+        }
+      } catch (err) {
+        console.error('[query-handler] Error removing pantry item:', err);
+        await ctx.reply('⚠️ Failed to remove item. Please try again.');
+      }
+      break;
+    }
+
     case 'query_pantry': {
       const p = parsed.params as Record<string, unknown>;
       const queryType = String(p['query_type'] ?? p['type'] ?? '').toLowerCase();
-      const isExpiryQuery = queryType.includes('expir') || String(text).toLowerCase().includes('expir');
+      const isExpiryQuery =
+        queryType.includes('expir') || String(text).toLowerCase().includes('expir');
 
       try {
         if (isExpiryQuery) {
@@ -79,9 +147,7 @@ export async function queryHandler(ctx: Context): Promise<void> {
           if (items.length === 0) {
             await ctx.reply('📭 Pantry is empty. Use /addpantry to add items.');
           } else {
-            const lines = items
-              .slice(0, 30)
-              .map((i) => `• ${i.name}: ${i.quantity}${i.unit}`);
+            const lines = items.slice(0, 30).map((i) => `• ${i.name}: ${i.quantity}${i.unit}`);
             const suffix = items.length > 30 ? `\n_…and ${items.length - 30} more_` : '';
             await ctx.reply(`📦 *Pantry stock:*\n\n${lines.join('\n')}${suffix}`, {
               parse_mode: 'Markdown',
@@ -95,16 +161,82 @@ export async function queryHandler(ctx: Context): Promise<void> {
       break;
     }
 
-    case 'query_schedule':
-    case 'skip_meal':
-      await ctx.reply(
-        '🗓 Meal schedule management is coming soon! For now, use /plan to view your schedule.',
-      );
+    case 'query_schedule': {
+      const p = parsed.params as Record<string, unknown>;
+      const rawDate = p['date'] ?? p['day'] ?? p['when'];
+      const isWeekQuery =
+        !rawDate ||
+        String(text).toLowerCase().includes('week') ||
+        String(text).toLowerCase().includes('plan');
+
+      try {
+        if (isWeekQuery) {
+          const from = todayIso();
+          const entries = await getWeekPlan(from, config.app.planHorizonDays);
+          if (entries.length === 0) {
+            await ctx.reply('🗓 No meals planned for the upcoming week.');
+          } else {
+            const grouped = entries.reduce<Record<string, MealEntry[]>>((acc, e) => {
+              (acc[e.date] ??= []).push(e);
+              return acc;
+            }, {});
+            const lines = Object.entries(grouped).map(([date, meals]) => {
+              return `*${formatDateShort(date)}:*\n${meals.map(formatMealLine).join('\n')}`;
+            });
+            await ctx.reply(`🗓 *Upcoming meal plan:*\n\n${lines.join('\n\n')}`, {
+              parse_mode: 'Markdown',
+            });
+          }
+        } else {
+          const date = resolveDate(rawDate);
+          const entries = await getByDate(date);
+          if (entries.length === 0) {
+            await ctx.reply(`🗓 No meals planned for ${formatDateShort(date)}.`);
+          } else {
+            const lines = entries.map(formatMealLine);
+            await ctx.reply(`🗓 *Meal plan for ${formatDateShort(date)}:*\n\n${lines.join('\n')}`, {
+              parse_mode: 'Markdown',
+            });
+          }
+        }
+      } catch (err) {
+        console.error('[query-handler] Error fetching schedule:', err);
+        await ctx.reply('⚠️ Failed to fetch meal schedule. Please try again.');
+      }
       break;
+    }
+
+    case 'skip_meal': {
+      const p = parsed.params as Record<string, unknown>;
+      const rawDate = p['date'] ?? p['day'] ?? p['when'];
+      const mealTypeRaw = p['meal_type'] ?? p['type'] ?? p['meal'];
+
+      const date = resolveDate(rawDate);
+      const mealTypeResult = MealTypeSchema.safeParse(mealTypeRaw);
+
+      if (!mealTypeResult.success) {
+        await ctx.reply(
+          '❌ Could not parse skip request. Try: "Skip lunch on Thursday" or use /skip <date> <type>.',
+        );
+        break;
+      }
+
+      try {
+        await skipMeal(date, mealTypeResult.data);
+        const type = mealTypeResult.data.charAt(0).toUpperCase() + mealTypeResult.data.slice(1);
+        await ctx.reply(`✅ ${type} on ${formatDateShort(date)} skipped. Portions recalculated.`);
+      } catch (err) {
+        if (err instanceof Error && /not found/i.test(err.message)) {
+          await ctx.reply(`❌ No ${String(mealTypeRaw)} planned for ${formatDateShort(date)}.`);
+        } else {
+          console.error('[query-handler] Error skipping meal:', err);
+          await ctx.reply('⚠️ Failed to skip meal. Please try again.');
+        }
+      }
+      break;
+    }
 
     default:
-      await ctx.reply(
-        "Sorry, I didn't understand that. Type /help to see what I can do.",
-      );
+      await ctx.reply("Sorry, I didn't understand that. Type /help to see what I can do.");
   }
 }
