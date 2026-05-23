@@ -16,7 +16,7 @@ export type IngredientUnit = z.infer<typeof IngredientUnitSchema>;
 
 export const IngredientSchema = z.object({
   name: z.string().min(1),
-  quantity: z.number().positive(),
+  quantity: z.number().min(0).nullable().default(0),
   unit: IngredientUnitSchema,
   notes: z.string().nullable().default(null),
 });
@@ -34,7 +34,6 @@ export type Recipe = z.infer<typeof RecipeSchema>;
 
 export const StoredRecipeSchema = RecipeSchema.extend({
   id: z.string(),
-  sourcePhotoUrl: z.string().url().optional(),
   notionUrl: z.string().url().optional(),
   createdAt: z.string(),
 });

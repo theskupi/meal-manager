@@ -14,10 +14,7 @@ function truncateJson(data: unknown): string {
     : serialised;
 }
 
-export async function saveRecipe(
-  recipe: Recipe,
-  sourcePhotoUrl?: string,
-): Promise<{ id: string; url: string }> {
+export async function saveRecipe(recipe: Recipe): Promise<{ id: string; url: string }> {
   const properties: NotionProperties = {
     Title: {
       title: [{ text: { content: recipe.title } }],
@@ -35,10 +32,6 @@ export async function saveRecipe(
 
   if (recipe.prepTimeMinutes !== null && recipe.prepTimeMinutes !== undefined) {
     properties['Prep Time (min)'] = { number: recipe.prepTimeMinutes };
-  }
-
-  if (sourcePhotoUrl) {
-    properties['Source Photo'] = { url: sourcePhotoUrl };
   }
 
   if (recipe.tags && recipe.tags.length > 0) {
@@ -95,9 +88,6 @@ export async function listRecipes(startCursor?: string): Promise<{
       const prepTimeProp = props['Prep Time (min)'] as unknown as { number: number | null };
       const prepTime = prepTimeProp?.number ?? null;
 
-      const photoProp = props['Source Photo'] as unknown as { url: string | null };
-      const sourcePhoto = photoProp?.url ?? undefined;
-
       const tagsProp = props['Tags'] as unknown as { multi_select: Array<{ name: string }> };
       const tags = (tagsProp?.multi_select ?? []).map((t) => t.name);
 
@@ -129,7 +119,6 @@ export async function listRecipes(startCursor?: string): Promise<{
         ingredients: normalised,
         steps: steps.map(String),
         tags,
-        sourcePhotoUrl: sourcePhoto,
         notionUrl: 'url' in page ? (page as PageObjectResponse).url : undefined,
         createdAt: fullPage.created_time,
       });

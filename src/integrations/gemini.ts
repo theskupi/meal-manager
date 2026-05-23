@@ -2,8 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { config } from '../config';
 import { Recipe, RecipeSchema } from '../models/recipe';
 
-const FLASH_MODEL = 'gemini-1.5-flash';
-const PRO_MODEL = 'gemini-1.5-pro';
+const FLASH_MODEL = 'gemini-2.5-flash';
 const MIN_INGREDIENTS_THRESHOLD = 3;
 const MAX_RETRIES = 3;
 const BACKOFF_BASE_MS = 4000;
@@ -91,7 +90,11 @@ async function callModel(modelName: string, imageBase64: string): Promise<string
 function parseRecipeJson(raw: string): Recipe | null {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw.trim());
+    const cleaned = raw
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/, '');
+    parsed = JSON.parse(cleaned);
   } catch {
     return null;
   }
@@ -117,13 +120,8 @@ export async function extractRecipe(imageBase64: string): Promise<Recipe> {
     return flashRecipe;
   }
 
-  console.info('[gemini] Flash returned insufficient ingredients, retrying with Pro model');
-  const proRaw = await callModel(PRO_MODEL, imageBase64);
-  const proRecipe = parseRecipeJson(proRaw);
-
-  if (proRecipe) {
-    return proRecipe;
-  }
-
-  throw new ExtractionError(`Could not parse a valid recipe from the image. Raw response: ${proRaw.slice(0, 200)}`);
+  console.info('[gemini] Flash raw response:', flashRaw);
+  throw new ExtractionError(
+    `Flash model returned ${flashRecipe ? `only ${flashRecipe.ingredients.length} ingredient(s)` : 'an unparseable response'}.`,
+  );
 }

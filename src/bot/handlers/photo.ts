@@ -22,12 +22,11 @@ export async function photoHandler(ctx: Context): Promise<void> {
       { parse_mode: 'Markdown' },
     );
 
-    const sourcePhotoUrl = `https://api.telegram.org/file/bot${process.env['TELEGRAM_BOT_TOKEN']}/${largest.file_id}`;
-    const { url } = await saveRecipe(recipe, sourcePhotoUrl);
+    const { url } = await saveRecipe(recipe);
 
     const ingredientList = recipe.ingredients
       .slice(0, 5)
-      .map((i) => `• ${i.quantity} ${i.unit} ${i.name}`)
+      .map((i) => `• ${i.quantity ?? '?'} ${i.unit} ${i.name}`)
       .join('\n');
     const more =
       recipe.ingredients.length > 5 ? `\n_…and ${recipe.ingredients.length - 5} more_` : '';
