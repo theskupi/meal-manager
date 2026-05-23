@@ -7,11 +7,13 @@ type NotionProperties = Parameters<typeof notionClient.pages.create>[0]['propert
 
 const MAX_RICH_TEXT_LENGTH = 2000;
 
-function truncateJson(data: unknown): string {
+function chunkJson(data: unknown): Array<{ text: { content: string } }> {
   const serialised = JSON.stringify(data);
-  return serialised.length > MAX_RICH_TEXT_LENGTH
-    ? serialised.slice(0, MAX_RICH_TEXT_LENGTH - 3) + '...'
-    : serialised;
+  const chunks: Array<{ text: { content: string } }> = [];
+  for (let i = 0; i < serialised.length; i += MAX_RICH_TEXT_LENGTH) {
+    chunks.push({ text: { content: serialised.slice(i, i + MAX_RICH_TEXT_LENGTH) } });
+  }
+  return chunks;
 }
 
 export async function saveRecipe(recipe: Recipe): Promise<{ id: string; url: string }> {
@@ -20,10 +22,10 @@ export async function saveRecipe(recipe: Recipe): Promise<{ id: string; url: str
       title: [{ text: { content: recipe.title } }],
     },
     Ingredients: {
-      rich_text: [{ text: { content: truncateJson(recipe.ingredients) } }],
+      rich_text: chunkJson(recipe.ingredients),
     },
     Steps: {
-      rich_text: [{ text: { content: truncateJson(recipe.steps) } }],
+      rich_text: chunkJson(recipe.steps),
     },
     Servings: {
       number: recipe.servings,
