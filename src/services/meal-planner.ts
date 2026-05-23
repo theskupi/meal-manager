@@ -179,6 +179,9 @@ export async function markConsumed(
   if (!entry) {
     throw new Error(`Meal entry not found: ${id}`);
   }
+  if (entry.status === 'consumed') {
+    throw new Error(`Meal entry already consumed: ${id}`);
+  }
 
   let ingredients: Ingredient[] = [];
 

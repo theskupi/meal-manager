@@ -111,15 +111,15 @@ Tuesday lunch" → bot confirms, entry marked skipped in Notion Meal Plan databa
 
 ### Tests for User Story 1 ⚠️ (Write FIRST — must FAIL before implementation)
 
-- [ ] T028 [P] [US1] Write unit tests for meal planner service in `tests/unit/meal-planner.test.ts`: mock notionClient; test createEntry (duplicate date+type rejected), getByDate, skipMeal (status → skipped), markConsumed (triggers deduct callback)
+- [x] T028 [P] [US1] Write unit tests for meal planner service in `tests/unit/meal-planner.test.ts`: mock notionClient; test createEntry (duplicate date+type rejected), getByDate, skipMeal (status → skipped), markConsumed (triggers deduct callback)
 
 ### Implementation for User Story 1
 
-- [ ] T029 [P] [US1] Create `MealEntry`, `MealType`, `MealStatus` Zod schemas and TypeScript types in `src/models/meal-plan.ts`; update `src/models/index.ts`
-- [ ] T030 [US1] Create meal planner service `src/services/meal-planner.ts`: implement `createEntry(entry: MealEntryInput)`, `getByDate(date: string): Promise<MealEntry[]>`, `getWeekPlan(from: string, days: number): Promise<MealEntry[]>`, `skipMeal(date: string, type: MealType): Promise<void>`, `markConsumed(id: string, onConsumed: (ingredients: Ingredient[]) => Promise<void>): Promise<void>` — call `pantry.deductByMeal` via the callback
-- [ ] T031 [US1] Extend query handler `src/bot/handlers/query.ts`: route `query_schedule` intent → `mealPlanner.getByDate` / `getWeekPlan` → format and reply; route `skip_meal` intent → `mealPlanner.skipMeal` → confirm reply
-- [ ] T032 [US1] Add `/plan [date]`, `/addmeal <date> <type> <recipe>`, `/skip <date> <type>` command handlers in `src/bot/handlers/command.ts`; register in `src/index.ts`
-- [ ] T033 [US1] Connect `markConsumed` flow: add `/eaten <date> <type>` command that calls `mealPlanner.markConsumed` and sends "✅ {meal_type} marked as done. Pantry updated." notification
+- [x] T029 [P] [US1] Create `MealEntry`, `MealType`, `MealStatus` Zod schemas and TypeScript types in `src/models/meal-plan.ts`; update `src/models/index.ts`
+- [x] T030 [US1] Create meal planner service `src/services/meal-planner.ts`: implement `createEntry(entry: MealEntryInput)`, `getByDate(date: string): Promise<MealEntry[]>`, `getWeekPlan(from: string, days: number): Promise<MealEntry[]>`, `skipMeal(date: string, type: MealType): Promise<void>`, `markConsumed(id: string, onConsumed: (ingredients: Ingredient[]) => Promise<void>): Promise<void>` — call `pantry.deductByMeal` via the callback
+- [x] T031 [US1] Extend query handler `src/bot/handlers/query.ts`: route `query_schedule` intent → `mealPlanner.getByDate` / `getWeekPlan` → format and reply; route `skip_meal` intent → `mealPlanner.skipMeal` → confirm reply
+- [x] T032 [US1] Add `/plan [date]`, `/addmeal <date> <type> <recipe>`, `/skip <date> <type>` command handlers in `src/bot/handlers/command.ts`; register in `src/index.ts`
+- [x] T033 [US1] Connect `markConsumed` flow: add `/eaten <date> <type>` command that calls `mealPlanner.markConsumed` and sends "✅ {meal_type} marked as done. Pantry updated." notification
 
 **Checkpoint**: US1 fully functional — schedule queries and plan adjustments via chat
 

@@ -373,11 +373,31 @@ export function registerCommandHandlers(bot: Telegraf<Context>): void {
         return;
       }
 
+      if (entry.status === 'consumed') {
+        const type = mealTypeResult.data.charAt(0).toUpperCase() + mealTypeResult.data.slice(1);
+        await ctx.reply(
+          `ℹ️ ${type} on ${formatDateShort(parsed.date)} is already marked as eaten.`,
+        );
+        return;
+      }
+
+      if (entry.status === 'skipped') {
+        const type = mealTypeResult.data.charAt(0).toUpperCase() + mealTypeResult.data.slice(1);
+        await ctx.reply(
+          `❌ ${type} on ${formatDateShort(parsed.date)} was skipped and cannot be marked as eaten.`,
+        );
+        return;
+      }
+
       await markConsumed(entry.id, (ingredients) => deductByMeal(ingredients));
 
       const type = mealTypeResult.data.charAt(0).toUpperCase() + mealTypeResult.data.slice(1);
       await ctx.reply(`✅ ${type} marked as done. Pantry updated.`);
     } catch (err) {
+      if (err instanceof Error && /already consumed/i.test(err.message)) {
+        await ctx.reply('ℹ️ This meal is already marked as eaten.');
+        return;
+      }
       console.error('[eaten-command] Error marking meal consumed:', err);
       await ctx.reply('⚠️ Failed to mark meal as consumed. Please try again.');
     }

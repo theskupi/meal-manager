@@ -28,12 +28,7 @@ jest.mock('../../src/integrations/notion', () => ({
 }));
 
 import { notionClient } from '../../src/integrations/notion';
-import {
-  createEntry,
-  getByDate,
-  skipMeal,
-  markConsumed,
-} from '../../src/services/meal-planner';
+import { createEntry, getByDate, skipMeal, markConsumed } from '../../src/services/meal-planner';
 
 const mockQuery = notionClient.databases.query as jest.Mock;
 const mockCreate = notionClient.pages.create as jest.Mock;
@@ -68,11 +63,23 @@ function makeMealPage(
 }
 
 function emptyQueryResult() {
-  return { results: [], next_cursor: null, has_more: false, object: 'list', type: 'page_or_database' };
+  return {
+    results: [],
+    next_cursor: null,
+    has_more: false,
+    object: 'list',
+    type: 'page_or_database',
+  };
 }
 
 function queryResult(...pages: ReturnType<typeof makeMealPage>[]) {
-  return { results: pages, next_cursor: null, has_more: false, object: 'list', type: 'page_or_database' };
+  return {
+    results: pages,
+    next_cursor: null,
+    has_more: false,
+    object: 'list',
+    type: 'page_or_database',
+  };
 }
 
 beforeEach(() => {
@@ -189,7 +196,15 @@ describe('skipMeal', () => {
 describe('markConsumed', () => {
   it('calls onConsumed callback with recipe ingredients and updates status to consumed', async () => {
     const recipeIngredients = [{ name: 'chicken', quantity: 200, unit: 'g', notes: null }];
-    const mealPage = makeMealPage('entry-1', '2026-05-25', 'dinner', 'Chicken Tikka', 4, 'planned', 'recipe-1');
+    const mealPage = makeMealPage(
+      'entry-1',
+      '2026-05-25',
+      'dinner',
+      'Chicken Tikka',
+      4,
+      'planned',
+      'recipe-1',
+    );
     const recipePage = {
       id: 'recipe-1',
       object: 'page',
@@ -218,6 +233,25 @@ describe('markConsumed', () => {
         }),
       }),
     );
+  });
+
+  it('throws when meal entry is already consumed', async () => {
+    const mealPage = makeMealPage(
+      'entry-1',
+      '2026-05-25',
+      'dinner',
+      'Chicken Tikka',
+      4,
+      'consumed',
+      'recipe-1',
+    );
+    mockRetrieve.mockResolvedValueOnce(mealPage);
+
+    const onConsumed = jest.fn();
+    await expect(markConsumed('entry-1', onConsumed)).rejects.toThrow(/already consumed/i);
+
+    expect(onConsumed).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
   it('calls onConsumed with empty array when meal has no linked recipe', async () => {
