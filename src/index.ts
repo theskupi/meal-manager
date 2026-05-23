@@ -3,6 +3,8 @@ import { bot, registerWebhook } from './integrations';
 import { authMiddleware } from './bot/middleware/auth';
 import { photoHandler } from './bot/handlers/photo';
 import { registerCommandHandlers } from './bot/handlers/command';
+import { queryHandler } from './bot/handlers/query';
+import { runDailyChecks } from './services/notifier';
 
 bot.use(authMiddleware);
 
@@ -22,6 +24,7 @@ bot.command('start', (ctx) =>
 
 registerCommandHandlers(bot);
 bot.on('photo', photoHandler);
+bot.on('text', queryHandler);
 
 async function start(): Promise<void> {
   console.info('[bot] Starting up…');
@@ -38,6 +41,12 @@ async function start(): Promise<void> {
     console.info('[bot] Running in long-polling mode (development)');
     console.info('[bot] Send /ping to your bot in Telegram to verify the connection');
   }
+
+  const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+  setInterval(() => {
+    void runDailyChecks();
+  }, SIX_HOURS_MS);
+  console.info('[bot] Daily checks scheduled every 6 hours');
 }
 
 start().catch((err: unknown) => {
