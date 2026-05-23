@@ -12,10 +12,10 @@ bot.command('start', (ctx) =>
   ctx.reply(
     '👋 *PapiPap* — your kitchen assistant is running\\!\n\n' +
       '📸 Send a cookbook photo to scan a recipe\n' +
-      '� /recipes — view saved recipes\n' +
-      '🗓 /plan — meal plan _(coming soon)_\n' +
-      '🛒 /groceries — shopping list _(coming soon)_\n' +
-      '📦 /pantry — pantry stock _(coming soon)_',
+      '📋 /recipes — view saved recipes\n' +
+      '🗓 /plan — meal plan _\\(coming soon\\)_\n' +
+      '🛒 /groceries — shopping list _\\(coming soon\\)_\n' +
+      '📦 /pantry — pantry stock _\\(coming soon\\)_',
     { parse_mode: 'MarkdownV2' },
   ),
 );
