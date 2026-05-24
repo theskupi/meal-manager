@@ -13,12 +13,12 @@ integration tests required for each external API boundary).
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and
 testing. Implementation order follows user direction: US2 (recipe scan) first, then US3
-(pantry), US1 (chat/plan), US5 (cascade), US4 (groceries), US6 (macros).
+(pantry), US1 (chat/plan), US5 (cascade), US4 (groceries).
 
 ## Format: `[ID] [P?] [Story?] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (US1–US6)
+- **[Story]**: Which user story this task belongs to (US1–US5)
 - Include exact file paths in descriptions
 
 ---
@@ -134,14 +134,14 @@ are restored; generate grocery list → reflects reduced requirements
 
 ### Tests for User Story 5 ⚠️ (Write FIRST — must FAIL before implementation)
 
-- [ ] T034 [P] [US5] Extend `tests/unit/meal-planner.test.ts` with cascade tests: test that skipping a meal calls `pantry.restoreBySkippedMeal` with correct ingredients; test servings change recalculates delta correctly
+- [x] T034 [P] [US5] Extend `tests/unit/meal-planner.test.ts` with cascade tests: test that skipping a meal calls `pantry.restoreBySkippedMeal` with correct ingredients; test servings change recalculates delta correctly
 
 ### Implementation for User Story 5
 
-- [ ] T035 [US5] Add `restoreBySkippedMeal(ingredients: Ingredient[])` to pantry service `src/services/pantry.ts`: reverse the ingredient deduction (add back to stock quantities)
-- [ ] T036 [US5] Extend `mealPlanner.skipMeal` in `src/services/meal-planner.ts` to call `pantry.restoreBySkippedMeal` with the skipped meal's recipe ingredients (fetch recipe from Notion before skip)
-- [ ] T037 [US5] Add `updateServings(id: string, newServings: number)` to `src/services/meal-planner.ts`: compute ingredient delta from old vs new servings; call `pantry.upsertItem` with delta to adjust stock; update MealEntry `Servings` in Notion
-- [ ] T038 [US5] Add `/servings <date> <type> <n>` command in `src/bot/handlers/command.ts` that calls `mealPlanner.updateServings` and replies with updated quantities
+- [x] T035 [US5] Add `restoreBySkippedMeal(ingredients: Ingredient[])` to pantry service `src/services/pantry.ts`: reverse the ingredient deduction (add back to stock quantities)
+- [x] T036 [US5] Extend `mealPlanner.skipMeal` in `src/services/meal-planner.ts` to call `pantry.restoreBySkippedMeal` with the skipped meal's recipe ingredients (fetch recipe from Notion before skip)
+- [x] T037 [US5] Add `updateServings(id: string, newServings: number)` to `src/services/meal-planner.ts`: compute ingredient delta from old vs new servings; call `pantry.upsertItem` with delta to adjust stock; update MealEntry `Servings` in Notion
+- [x] T038 [US5] Add `/servings <date> <type> <n>` command in `src/bot/handlers/command.ts` that calls `mealPlanner.updateServings` and replies with updated quantities
 
 **Checkpoint**: US5 functional — skip and servings-change cascade through pantry correctly
 
@@ -169,28 +169,6 @@ items with correct shortfall quantities and no duplicates
 
 ---
 
-## Phase 8: User Story 6 — Nutritional Macro & Kcal Balancing (Priority: P6 — Nice-to-Have)
-
-**Goal**: Fetch macro data per ingredient; surface per-meal nutritional breakdown via chat
-
-**Independent Test**: "What are the macros for tonight's dinner?" → bot replies with
-calories, protein, carbs, fat per serving for that meal's recipe
-
-### Tests for User Story 6 ⚠️ (Write FIRST — must FAIL before implementation)
-
-- [ ] T044 [P] [US6] Write unit tests for nutrition service in `tests/unit/nutrition.test.ts`: mock nutrition API client; test macro aggregation across ingredients, null handling when API has no data for an ingredient, per-serving calculation
-
-### Implementation for User Story 6
-
-- [ ] T045 [P] [US6] Extend `RecipeSchema` in `src/models/recipe.ts` with optional `macros` field: `{ kcal: number, proteinG: number, carbsG: number, fatG: number } | undefined`
-- [ ] T046 [P] [US6] Create nutrition API client `src/integrations/nutrition.ts`: implement `fetchMacros(ingredientName: string, quantity: number, unit: IngredientUnit): Promise<Macros | null>` — try Edamam API first (`EDAMAM_APP_ID`, `EDAMAM_APP_KEY` env vars), fall back to Open Food Facts API; return null on miss; add both keys to `.env.example`
-- [ ] T047 [US6] Create nutrition service `src/services/nutrition.ts`: implement `calculateMealMacros(recipe: Recipe, servings: number): Promise<Macros>` — fetch macros per ingredient via `nutritionClient`, sum totals, divide by servings; cache results on the Recipe's `macros` field in Notion on first fetch
-- [ ] T048 [US6] Extend query handler `src/bot/handlers/query.ts` and Groq intent parser to handle macro query intent; format and reply with per-serving breakdown
-
-**Checkpoint**: US6 functional — macro queries answered via chat
-
----
-
 ## Phase N: Polish & Cross-Cutting Concerns
 
 **Purpose**: Production readiness, logging, documentation, and final validation
@@ -214,7 +192,6 @@ calories, protein, carbs, fat per serving for that meal's recipe
 - **US1 (Phase 5)**: Depends on Foundational; benefits from US2 (recipes needed for plan)
 - **US5 (Phase 6)**: Depends on US1 + US3 (needs both meal plan and pantry service)
 - **US4 (Phase 7)**: Depends on US3 + US1 (needs pantry and meal plan services)
-- **US6 (Phase 8)**: Depends on US2 (needs Recipe model with macros field)
 - **Polish (Phase N)**: Depends on all desired user stories complete
 
 ### Within Each User Story
@@ -264,7 +241,6 @@ Task: T016 — src/integrations/gemini.ts
 4. US1 → meal schedule queries and adjustments via chat
 5. US5 → skipping meals cascades correctly
 6. US4 → grocery list on demand, restock alerts
-7. US6 (optional) → macro queries
 
 ---
 

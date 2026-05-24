@@ -9,6 +9,7 @@ import {
   MealTypeSchema,
 } from '../models/meal-plan';
 import { Ingredient, IngredientUnitSchema } from '../models/recipe';
+import { restoreBySkippedMeal, deductByMeal } from './pantry';
 
 type NotionProperties = Parameters<typeof notionClient.pages.create>[0]['properties'];
 
@@ -156,10 +157,62 @@ export async function getWeekPlan(from: string, days: number): Promise<MealEntry
     .filter((e): e is MealEntry => e !== null);
 }
 
+async function fetchRecipeData(
+  recipeId: string,
+): Promise<{ ingredients: Ingredient[]; servings: number }> {
+  const recipePage = await withRetry(() => notionClient.pages.retrieve({ page_id: recipeId }));
+  const recipeProps = (recipePage as PageObjectResponse).properties as unknown as Record<
+    string,
+    unknown
+  >;
+
+  const servingsProp = recipeProps['Servings'] as { number: number | null } | undefined;
+  const servings = servingsProp?.number ?? 4;
+
+  const ingredientsProp = recipeProps['Ingredients'] as
+    | { rich_text: Array<{ plain_text: string }> }
+    | undefined;
+  const ingredientsJson = (ingredientsProp?.rich_text ?? []).map((t) => t.plain_text).join('');
+
+  let ingredients: Ingredient[] = [];
+  if (ingredientsJson) {
+    try {
+      const raw = JSON.parse(ingredientsJson) as unknown[];
+      ingredients = raw
+        .map((item) => {
+          const i = item as Record<string, unknown>;
+          const unitResult = IngredientUnitSchema.safeParse(i['unit']);
+          return {
+            name: String(i['name'] ?? ''),
+            quantity: Number(i['quantity'] ?? 0),
+            unit: unitResult.success ? unitResult.data : ('other' as const),
+            notes: i['notes'] != null ? String(i['notes']) : null,
+          };
+        })
+        .filter((i) => i.name);
+    } catch {
+      console.warn('[meal-planner] Could not parse recipe ingredients JSON');
+    }
+  }
+
+  return { ingredients, servings };
+}
+
 export async function skipMeal(date: string, type: MealType): Promise<void> {
   const entry = await findByDateAndType(date, type);
   if (!entry) {
     throw new Error(`Meal entry not found for ${date} ${type}`);
+  }
+
+  if (entry.recipeId) {
+    try {
+      const { ingredients } = await fetchRecipeData(entry.recipeId);
+      if (ingredients.length > 0) {
+        await restoreBySkippedMeal(ingredients);
+      }
+    } catch (err) {
+      console.warn('[meal-planner] Could not restore pantry for skipped meal:', err);
+    }
   }
 
   await withRetry(() =>
@@ -167,6 +220,52 @@ export async function skipMeal(date: string, type: MealType): Promise<void> {
       page_id: entry.id,
       properties: { Status: { select: { name: 'skipped' } } },
     }),
+  );
+}
+
+export async function updateServings(id: string, newServings: number): Promise<MealEntry> {
+  const page = await withRetry(() => notionClient.pages.retrieve({ page_id: id }));
+  const entry = parseMealEntryPage(page as PageObjectResponse);
+  if (!entry) {
+    throw new Error(`Meal entry not found: ${id}`);
+  }
+
+  const oldServings = entry.servings;
+
+  if (entry.recipeId && oldServings !== newServings) {
+    try {
+      const { ingredients, servings: recipeServings } = await fetchRecipeData(entry.recipeId);
+      const deltaIngredients = ingredients
+        .map((ing) => ({
+          ...ing,
+          quantity: Math.abs((ing.quantity ?? 0) * (newServings - oldServings)) / recipeServings,
+        }))
+        .filter((ing) => ing.quantity > 0);
+
+      if (deltaIngredients.length > 0) {
+        if (newServings < oldServings) {
+          await restoreBySkippedMeal(deltaIngredients);
+        } else {
+          await deductByMeal(deltaIngredients);
+        }
+      }
+    } catch (err) {
+      console.warn('[meal-planner] Could not adjust pantry for servings change:', err);
+    }
+  }
+
+  const updated = await withRetry(() =>
+    notionClient.pages.update({
+      page_id: id,
+      properties: { Servings: { number: newServings } },
+    }),
+  );
+
+  return (
+    parseMealEntryPage(updated as PageObjectResponse) ?? {
+      ...entry,
+      servings: newServings,
+    }
   );
 }
 

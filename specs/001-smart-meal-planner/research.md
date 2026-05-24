@@ -14,6 +14,7 @@ both long-polling (development) and webhook (production) with a single config to
 handles Telegram file downloads and photo messages natively.
 
 **Alternatives considered**:
+
 - `node-telegram-bot-api` — rejected: weaker TypeScript support, callback-based API
   requires more boilerplate.
 - Raw Telegram Bot API over `fetch` — rejected: significant undifferentiated work with no
@@ -31,6 +32,7 @@ Flash free tier: 15 req/min, 1 million tokens/day. Pro fallback is triggered whe
 returns an incomplete or low-confidence extraction (fewer than 3 ingredients parsed).
 
 **Recipe extraction approach**:
+
 1. Telegram delivers photo file_id.
 2. Bot downloads highest-resolution photo version (Telegram provides up to 4 sizes).
 3. Photo is base64-encoded and sent inline in the Gemini API request.
@@ -38,6 +40,7 @@ returns an incomplete or low-confidence extraction (fewer than 3 ingredients par
 5. Response is validated with Zod; if validation fails, Groq is called to repair the JSON.
 
 **Alternatives considered**:
+
 - OpenAI GPT-4o-mini — kept as secondary option in constitution but not primary per user
   preference for Gemini.
 - Google Cloud Vision OCR + manual parsing — rejected: constitution prohibits manual
@@ -50,6 +53,7 @@ returns an incomplete or low-confidence extraction (fewer than 3 ingredients par
 **Decision**: `groq-sdk` with `llama-3.3-70b-versatile`
 
 **Rationale**: Groq provides sub-second inference for text-only tasks. Used for:
+
 - Parsing user intent from free-form Telegram messages ("skip lunch tomorrow" → structured
   `MealAdjustment` object).
 - Repairing malformed Gemini JSON outputs before re-validation with Zod.
@@ -58,6 +62,7 @@ returns an incomplete or low-confidence extraction (fewer than 3 ingredients par
 Free tier: 6,000 req/day, 30 req/min with llama-3.3-70b. Sufficient for a single household.
 
 **Alternatives considered**:
+
 - Gemini for NLP too — rejected: adds cost/latency when Groq is faster and cheaper for
   text-only tasks, and constitution mandates Groq as default for text processing.
 
@@ -73,6 +78,7 @@ domain entities. The Notion API supports create/read/update/query operations suf
 all v1 requirements.
 
 **Key constraints and mitigations**:
+
 - **Rate limit (3 req/s)**: All bulk writes (grocery list generation, batch pantry updates)
   MUST use a simple queue that throttles to 2.5 req/s with exponential backoff on 429s.
 - **No real-time subscriptions**: The bot polls or reacts to Telegram events; Notion is
@@ -82,6 +88,7 @@ all v1 requirements.
   boundary.
 
 **Alternatives considered**:
+
 - PostgreSQL / SQLite — rejected for v1: adds infrastructure complexity and removes the
   family-facing visual dashboard benefit.
 - Airtable — rejected: not in the approved service list in the constitution.
@@ -98,6 +105,7 @@ Notion) are parsed through Zod schemas at the integration boundary. Invalid data
 rejected at the boundary, never propagated into service logic.
 
 **Pattern**:
+
 ```typescript
 // src/models/recipe.ts
 export const RecipeSchema = z.object({ ... });
@@ -111,6 +119,7 @@ export type Recipe = z.infer<typeof RecipeSchema>;
 **Decision**: Node 20 LTS, TypeScript 5.x, `ts-node` for development, `tsc` for production
 
 **tsconfig.json key settings**:
+
 - `"strict": true` — constitution requirement
 - `"target": "ES2022"` — Node 20 supports all ES2022 features natively
 - `"module": "commonjs"` — compatibility with all npm packages
@@ -119,6 +128,7 @@ export type Recipe = z.infer<typeof RecipeSchema>;
 - `"esModuleInterop": true` — required for some CJS/ESM interop
 
 **Dev tooling**:
+
 - `eslint` + `@typescript-eslint/eslint-plugin` — linting
 - `prettier` — formatting
 - `jest` + `ts-jest` — testing
@@ -136,6 +146,7 @@ no OAuth — just a static list of numeric Telegram user IDs configured by the a
 Unauthorised messages are silently ignored (no reply to avoid bot enumeration).
 
 **Implementation**:
+
 ```typescript
 // auth.ts — runs before all handlers
 const allowedIds = config.allowedUserIds; // number[]
@@ -165,6 +176,7 @@ registration during integration testing.
 **Decision**: Notion database IDs stored as environment variables; not hardcoded
 
 Three required env vars:
+
 - `NOTION_RECIPES_DB_ID` — the Notion database for recipes
 - `NOTION_PANTRY_DB_ID` — the Notion database for pantry items
 - `NOTION_MEAL_PLAN_DB_ID` — the Notion database for meal plan entries
@@ -186,4 +198,3 @@ The user specified this delivery order, which drives the task prioritisation:
 6. **US1 — Chat Queries & Plan**: Groq NLP for schedule queries, MealPlan in Notion
 7. **US4 — Grocery Lists & Alerts**: Diff service + restock notification dispatch
 8. **US5 — Cascade Recalculation**: Portion adjustment logic when plan changes
-9. **US6 — Macros** (nice-to-have): Edamam / Open Food Facts integration

@@ -7,7 +7,13 @@ import {
   deductByMeal,
   deleteItem,
 } from '../../services/pantry';
-import { createEntry, getByDate, skipMeal, markConsumed } from '../../services/meal-planner';
+import {
+  createEntry,
+  getByDate,
+  skipMeal,
+  markConsumed,
+  updateServings,
+} from '../../services/meal-planner';
 import { IngredientUnitSchema } from '../../models/recipe';
 import { MealTypeSchema, MealEntry } from '../../models/meal-plan';
 
@@ -400,6 +406,50 @@ export function registerCommandHandlers(bot: Telegraf<Context>): void {
       }
       console.error('[eaten-command] Error marking meal consumed:', err);
       await ctx.reply('⚠️ Failed to mark meal as consumed. Please try again.');
+    }
+  });
+
+  bot.command('servings', async (ctx) => {
+    if (!ctx.message || !('text' in ctx.message)) return;
+    const argsStr = ctx.message.text.replace(/^\/servings\s*/i, '').trim();
+    const parts = argsStr.split(/\s+/);
+
+    if (parts.length < 3) {
+      await ctx.reply(
+        '❌ Could not parse command.\nFormat: /servings <date> <type> <n>\nExample: /servings 2026-05-25 dinner 2',
+      );
+      return;
+    }
+
+    const [dateArg, typeArg, nArg] = parts as [string, string, string];
+    const mealTypeResult = MealTypeSchema.safeParse(typeArg);
+    if (!mealTypeResult.success) {
+      await ctx.reply('❌ Invalid meal type. Use: breakfast, lunch, or dinner.');
+      return;
+    }
+
+    const newServings = parseInt(nArg, 10);
+    if (isNaN(newServings) || newServings < 1) {
+      await ctx.reply('❌ Invalid servings count. Must be a positive integer.');
+      return;
+    }
+
+    try {
+      const entries = await getByDate(dateArg);
+      const entry = entries.find((e) => e.mealType === mealTypeResult.data);
+      if (!entry) {
+        await ctx.reply(`❌ No ${typeArg} planned for ${formatDateShort(dateArg)}.`);
+        return;
+      }
+
+      const updated = await updateServings(entry.id, newServings);
+      const type = mealTypeResult.data.charAt(0).toUpperCase() + mealTypeResult.data.slice(1);
+      await ctx.reply(
+        `✅ ${type} on ${formatDateShort(dateArg)}: servings updated to ${updated.servings}. Pantry adjusted.`,
+      );
+    } catch (err) {
+      console.error('[servings-command] Error updating servings:', err);
+      await ctx.reply('⚠️ Failed to update servings. Please try again.');
     }
   });
 }
