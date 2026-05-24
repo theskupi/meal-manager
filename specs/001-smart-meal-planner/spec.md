@@ -136,33 +136,9 @@ and verifying that related meals in the plan have their portions recalculated co
 
 ---
 
-### User Story 6 - Nutritional Macro & Kcal Balancing (Priority: P6 — Nice-to-Have)
-
-The system fetches nutritional composition data for each recipe's ingredients and calculates
-per-meal macronutrient and calorie values. A family member can set a daily calorie target, and
-the system suggests portion adjustments to meet the target.
-
-**Why this priority**: Adds health-tracking value on top of the core planning system. Requires
-the recipe library (US2) and nutritional data API to be operational. Nice-to-have for v1.
-
-**Independent Test**: Can be tested by selecting a recipe, requesting a nutritional breakdown
-via the chat bot, and verifying the displayed calories and macros match reference values.
-
-**Acceptance Scenarios**:
-
-1. **Given** a recipe exists in the gallery, **When** a user asks "What are the macros for
-   tonight's dinner?", **Then** the chat bot replies with calories, protein, carbohydrates,
-   and fat values per serving.
-2. **Given** a daily calorie target is configured for a family member, **When** the weekly
-   plan is generated, **Then** the system suggests portion sizes that keep daily intake within
-   ±10% of the target.
-
----
-
 ### Edge Cases
 
 - What happens when the cookbook photo contains multiple recipes on the same page?
-- How does the system handle an ingredient with no matching entry in the nutritional data API?
 - What happens if a user sends conflicting plan changes in quick succession (race condition)?
 - How does the chat bot behave when all external services are unavailable?
 - What if an ingredient has no defined minimum threshold — does it still appear on the grocery
@@ -204,16 +180,11 @@ via the chat bot, and verifying the displayed calories and macros match referenc
 - **FR-014**: The meal plan MUST support a configurable planning horizon with a default of
   5 days and a maximum of 31 days (1 month); the horizon MUST be adjustable by the
   family administrator without a system restart.
-- **FR-015** _(Nice-to-Have)_: System SHOULD fetch nutritional composition data for each
-  recipe's ingredients and calculate per-meal calorie and macro values (protein, carbs, fat).
-- **FR-016** _(Nice-to-Have)_: System SHOULD accept a daily calorie target per family member
-  and suggest portion adjustments to match the target.
 
 ### Key Entities _(include if feature involves data)_
 
 - **Recipe**: Represents a dish; has a title, ingredient list (with quantities and units),
-  step-by-step preparation instructions, portion count, optional photo reference, and
-  optional nutritional metadata.
+  step-by-step preparation instructions, portion count, and optional photo reference.
 - **Ingredient**: A named food item with quantity, unit of measurement, and optional expiry
   date. Exists both as a recipe component and as a pantry stock entry.
 - **MealPlan**: A calendar-based schedule mapping meals (breakfast, lunch, dinner) to specific
@@ -257,5 +228,3 @@ via the chat bot, and verifying the displayed calories and macros match referenc
   administrator before first use.
 - Recipes can only be added via photo ingestion or manual chat commands; importing from
   third-party recipe apps is out of scope for v1.
-- The nutritional macro balancing feature (US6) is a nice-to-have and will not block v1
-  release if the required data API has coverage gaps.

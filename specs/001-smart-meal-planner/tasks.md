@@ -169,28 +169,6 @@ items with correct shortfall quantities and no duplicates
 
 ---
 
-## Phase 8: User Story 6 — Nutritional Macro & Kcal Balancing (Priority: P6 — Nice-to-Have)
-
-**Goal**: Fetch macro data per ingredient; surface per-meal nutritional breakdown via chat
-
-**Independent Test**: "What are the macros for tonight's dinner?" → bot replies with
-calories, protein, carbs, fat per serving for that meal's recipe
-
-### Tests for User Story 6 ⚠️ (Write FIRST — must FAIL before implementation)
-
-- [ ] T044 [P] [US6] Write unit tests for nutrition service in `tests/unit/nutrition.test.ts`: mock nutrition API client; test macro aggregation across ingredients, null handling when API has no data for an ingredient, per-serving calculation
-
-### Implementation for User Story 6
-
-- [ ] T045 [P] [US6] Extend `RecipeSchema` in `src/models/recipe.ts` with optional `macros` field: `{ kcal: number, proteinG: number, carbsG: number, fatG: number } | undefined`
-- [ ] T046 [P] [US6] Create nutrition API client `src/integrations/nutrition.ts`: implement `fetchMacros(ingredientName: string, quantity: number, unit: IngredientUnit): Promise<Macros | null>` — try Edamam API first (`EDAMAM_APP_ID`, `EDAMAM_APP_KEY` env vars), fall back to Open Food Facts API; return null on miss; add both keys to `.env.example`
-- [ ] T047 [US6] Create nutrition service `src/services/nutrition.ts`: implement `calculateMealMacros(recipe: Recipe, servings: number): Promise<Macros>` — fetch macros per ingredient via `nutritionClient`, sum totals, divide by servings; cache results on the Recipe's `macros` field in Notion on first fetch
-- [ ] T048 [US6] Extend query handler `src/bot/handlers/query.ts` and Groq intent parser to handle macro query intent; format and reply with per-serving breakdown
-
-**Checkpoint**: US6 functional — macro queries answered via chat
-
----
-
 ## Phase N: Polish & Cross-Cutting Concerns
 
 **Purpose**: Production readiness, logging, documentation, and final validation
@@ -214,7 +192,6 @@ calories, protein, carbs, fat per serving for that meal's recipe
 - **US1 (Phase 5)**: Depends on Foundational; benefits from US2 (recipes needed for plan)
 - **US5 (Phase 6)**: Depends on US1 + US3 (needs both meal plan and pantry service)
 - **US4 (Phase 7)**: Depends on US3 + US1 (needs pantry and meal plan services)
-- **US6 (Phase 8)**: Depends on US2 (needs Recipe model with macros field)
 - **Polish (Phase N)**: Depends on all desired user stories complete
 
 ### Within Each User Story
@@ -264,7 +241,6 @@ Task: T016 — src/integrations/gemini.ts
 4. US1 → meal schedule queries and adjustments via chat
 5. US5 → skipping meals cascades correctly
 6. US4 → grocery list on demand, restock alerts
-7. US6 (optional) → macro queries
 
 ---
 
