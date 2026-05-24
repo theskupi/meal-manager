@@ -8,6 +8,8 @@ export interface ParsedIntent {
     | 'query_schedule'
     | 'skip_meal'
     | 'query_pantry'
+    | 'generate_menu'
+    | 'query_groceries'
     | 'unknown';
   params: Record<string, unknown>;
 }
@@ -52,6 +54,8 @@ export async function parseIntent(text: string): Promise<ParsedIntent> {
           '- query_pantry: {"query_type": "list" | "expiry"}\n' +
           '- query_schedule: {"date": <YYYY-MM-DD or "today" or "tomorrow" or null>}\n' +
           '- skip_meal: {"date": <YYYY-MM-DD or "today" or "tomorrow">, "meal_type": <"breakfast"|"lunch"|"dinner">}\n' +
+          '- generate_menu: generate an automated lunch plan for the upcoming week. params: {}\n' +
+          '- query_groceries: show the grocery shopping list / what needs to be bought. params: {}\n' +
           '- unknown: {}\n\n' +
           'For dates, always convert to YYYY-MM-DD format regardless of the input format (e.g. "20.3.2029" → "2029-03-20").\n' +
           'For units, map common words to the enum (e.g. "gram"/"gramy"/"g" → "g", "kus"/"piece"/"ks" → "piece").',

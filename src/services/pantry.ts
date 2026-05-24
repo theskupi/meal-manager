@@ -3,6 +3,7 @@ import { config } from '../config';
 import { notionClient, withRetry } from '../integrations/notion';
 import { PantryItem, PantryItemInput } from '../models/pantry-item';
 import { convertToUnit, Ingredient, IngredientUnit, IngredientUnitSchema } from '../models/recipe';
+import { sendRestockAlert } from './notifier';
 
 type NotionProperties = Parameters<typeof notionClient.pages.create>[0]['properties'];
 
@@ -76,17 +77,23 @@ export async function upsertItem(item: PantryItemInput): Promise<PantryItem> {
       notionClient.pages.update({ page_id: existing.id, properties }),
     );
 
-    return (
-      parsePantryPage(updated as PageObjectResponse) ?? {
-        id: existing.id,
-        name: normalizedName,
-        quantity: newQuantity,
-        unit: storedUnit,
-        expiryDate: item.expiryDate,
-        minThreshold: item.minThreshold,
-        updatedAt: new Date().toISOString(),
-      }
-    );
+    const updatedItem = parsePantryPage(updated as PageObjectResponse) ?? {
+      id: existing.id,
+      name: normalizedName,
+      quantity: newQuantity,
+      unit: storedUnit,
+      expiryDate: item.expiryDate,
+      minThreshold: item.minThreshold,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (
+      updatedItem.minThreshold !== undefined &&
+      updatedItem.quantity <= updatedItem.minThreshold
+    ) {
+      void sendRestockAlert(updatedItem);
+    }
+    return updatedItem;
   }
 
   const createProperties: NotionProperties = {
@@ -108,17 +115,20 @@ export async function upsertItem(item: PantryItemInput): Promise<PantryItem> {
     }),
   );
 
-  return (
-    parsePantryPage(page as PageObjectResponse) ?? {
-      id: page.id,
-      name: normalizedName,
-      quantity: item.quantity,
-      unit: item.unit,
-      expiryDate: item.expiryDate,
-      minThreshold: item.minThreshold,
-      updatedAt: new Date().toISOString(),
-    }
-  );
+  const createdItem = parsePantryPage(page as PageObjectResponse) ?? {
+    id: page.id,
+    name: normalizedName,
+    quantity: item.quantity,
+    unit: item.unit,
+    expiryDate: item.expiryDate,
+    minThreshold: item.minThreshold,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (createdItem.minThreshold !== undefined && createdItem.quantity <= createdItem.minThreshold) {
+    void sendRestockAlert(createdItem);
+  }
+  return createdItem;
 }
 
 export async function listItems(): Promise<PantryItem[]> {

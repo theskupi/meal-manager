@@ -156,14 +156,14 @@ items with correct shortfall quantities and no duplicates
 
 ### Tests for User Story 4 ⚠️ (Write FIRST — must FAIL before implementation)
 
-- [ ] T039 [P] [US4] Write unit tests for grocery list service in `tests/unit/grocery-list.test.ts`: mock mealPlanner and pantry services; test that shortfall is calculated correctly, zero-shortfall items are excluded, unit-mismatched items are treated as separate line items
+- [x] T039 [P] [US4] Write unit tests for grocery list service in `tests/unit/grocery-list.test.ts`: mock mealPlanner and pantry services; test that shortfall is calculated correctly, zero-shortfall items are excluded, unit-mismatched items are treated as separate line items
 
 ### Implementation for User Story 4
 
-- [ ] T040 [P] [US4] Create `GroceryItem` type in `src/models/grocery-list.ts`; update `src/models/index.ts`
-- [ ] T041 [US4] Create grocery list service `src/services/grocery-list.ts`: implement `generate(): Promise<GroceryItem[]>` — fetch upcoming MealEntries within horizon, aggregate ingredient requirements per recipe servings, fetch current PantryItems, compute shortfall (required - stock), return items where shortfall > 0
-- [ ] T042 [US4] Wire threshold alerts into pantry upsert: after every `pantry.upsertItem` call, invoke `notifier.checkThresholds` and dispatch restock alerts for any newly-below-threshold items in `src/services/pantry.ts`
-- [ ] T043 [US4] Add `/groceries` command in `src/bot/handlers/command.ts`: call `groceryList.generate()`, format as bulleted list grouped by unit; add `/setthreshold <item> <qty> <unit>` command calling `pantry.setThreshold`; register both in `src/index.ts`
+- [x] T040 [P] [US4] Create `GroceryItem` type in `src/models/grocery-list.ts`; update `src/models/index.ts`
+- [x] T041 [US4] Create grocery list service `src/services/grocery-list.ts`: implement `generate(): Promise<GroceryItem[]>` — fetch upcoming MealEntries within horizon, aggregate ingredient requirements per recipe servings, fetch current PantryItems, compute shortfall (required - stock), return items where shortfall > 0
+- [x] T042 [US4] Wire threshold alerts into pantry upsert: after every `pantry.upsertItem` call, invoke `notifier.checkThresholds` and dispatch restock alerts for any newly-below-threshold items in `src/services/pantry.ts`
+- [x] T043 [US4] Add `/groceries` command in `src/bot/handlers/command.ts`: call `groceryList.generate()`, format as bulleted list grouped by unit; add `/setthreshold <item> <qty> <unit>` command calling `pantry.setThreshold`; register both in `src/index.ts`
 
 **Checkpoint**: US4 functional — grocery list generated on demand, restock alerts firing
 
@@ -184,14 +184,14 @@ trigger again, and verify recipe sequence order differs due to per-run shuffling
 
 ### Tests for User Story 6 ⚠️ (Write FIRST — must FAIL before implementation)
 
-- [ ] T044 [P] [US6] Extend `tests/unit/meal-planner.test.ts` with `generateLunchPlan` tests: mock `recipeStore.listRecipes` and `notionClient`; test (a) two successive calls produce different recipe order (shuffle), (b) recipe with servings=4 and householdSize=2 covers 2 consecutive days, (c) existing lunch entries are skipped, (d) empty pantry does not block generation
+- [x] T044 [P] [US6] Extend `tests/unit/meal-planner.test.ts` with `generateLunchPlan` tests: mock `recipeStore.listRecipes` and `notionClient`; test (a) two successive calls produce different recipe order (shuffle), (b) recipe with servings=4 and householdSize=2 covers 2 consecutive days, (c) existing lunch entries are skipped, (d) empty pantry does not block generation
 
 ### Implementation for User Story 6
 
-- [ ] T045 [P] [US6] Add `HOUSEHOLD_SIZE` env var (default `2`) to `src/config/index.ts` and to `.env.example`; expose as `config.householdSize: number`
-- [ ] T046 [US6] Add `generateLunchPlan(horizonDays: number): Promise<MealEntry[]>` to `src/services/meal-planner.ts`: (1) fetch all recipes via `recipeStore.listRecipes`; (2) Fisher-Yates shuffle per run; (3) iterate upcoming dates within horizon, skip dates that already have a `lunch` MealEntry; (4) for each recipe assign `floor(recipe.servings / config.householdSize)` consecutive empty days with `servings: config.householdSize`; (5) batch-create MealEntries in Notion; return created entries
-- [ ] T047 [US6] Add `/generatemenu` command in `src/bot/handlers/command.ts`: call `mealPlanner.generateLunchPlan(config.planHorizonDays)`, then call `groceryList.generate()`; format single reply — day-by-day plan (one line per day) followed by grocery gap section (omit zero-shortfall items; if pantry is empty show all required ingredients); register command in `src/index.ts`
-- [ ] T048 [US6] Extend Groq `parseIntent` in `src/integrations/groq.ts` to recognise `generate_menu` intent (e.g. "generate my lunch plan", "generate menu for the week"); route `generate_menu` intent in `src/bot/handlers/query.ts` to the same handler logic as `/generatemenu`
+- [x] T045 [P] [US6] Add `HOUSEHOLD_SIZE` env var (default `2`) to `src/config/index.ts` and to `.env.example`; expose as `config.householdSize: number`
+- [x] T046 [US6] Add `generateLunchPlan(horizonDays: number): Promise<MealEntry[]>` to `src/services/meal-planner.ts`: (1) fetch all recipes via `recipeStore.listRecipes`; (2) Fisher-Yates shuffle per run; (3) iterate upcoming dates within horizon, skip dates that already have a `lunch` MealEntry; (4) for each recipe assign `floor(recipe.servings / config.householdSize)` consecutive empty days with `servings: config.householdSize`; (5) batch-create MealEntries in Notion; return created entries
+- [x] T047 [US6] Add `/generatemenu` command in `src/bot/handlers/command.ts`: call `mealPlanner.generateLunchPlan(config.planHorizonDays)`, then call `groceryList.generate()`; format single reply — day-by-day plan (one line per day) followed by grocery gap section (omit zero-shortfall items; if pantry is empty show all required ingredients); register command in `src/index.ts`
+- [x] T048 [US6] Extend Groq `parseIntent` in `src/integrations/groq.ts` to recognise `generate_menu` intent (e.g. "generate my lunch plan", "generate menu for the week"); route `generate_menu` intent in `src/bot/handlers/query.ts` to the same handler logic as `/generatemenu`
 
 **Checkpoint**: US6 fully functional — `/generatemenu` produces a complete lunch plan + grocery gap in one message
 

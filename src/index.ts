@@ -26,7 +26,8 @@ bot.command('start', (ctx) =>
       '📦 /pantry — pantry stock\n' +
       '➕ /addpantry \\<name\\> \\<qty\\> \\<unit\\> — add item\n' +
       '🔔 /setthreshold \\<name\\> \\<qty\\> \\<unit\\> — restock alert\n\n' +
-      '🛒 /groceries — shopping list _\\(coming soon\\)_',
+      '🛒 /groceries — shopping list\n' +
+      '🗓 /generatemenu — generate lunch plan for the week',
     { parse_mode: 'MarkdownV2' },
   ),
 );
