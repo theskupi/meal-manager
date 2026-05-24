@@ -13,12 +13,12 @@ integration tests required for each external API boundary).
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and
 testing. Implementation order follows user direction: US2 (recipe scan) first, then US3
-(pantry), US1 (chat/plan), US5 (cascade), US4 (groceries), US6 (macros).
+(pantry), US1 (chat/plan), US5 (cascade), US4 (groceries).
 
 ## Format: `[ID] [P?] [Story?] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (US1–US6)
+- **[Story]**: Which user story this task belongs to (US1–US5)
 - Include exact file paths in descriptions
 
 ---
@@ -134,14 +134,14 @@ are restored; generate grocery list → reflects reduced requirements
 
 ### Tests for User Story 5 ⚠️ (Write FIRST — must FAIL before implementation)
 
-- [ ] T034 [P] [US5] Extend `tests/unit/meal-planner.test.ts` with cascade tests: test that skipping a meal calls `pantry.restoreBySkippedMeal` with correct ingredients; test servings change recalculates delta correctly
+- [x] T034 [P] [US5] Extend `tests/unit/meal-planner.test.ts` with cascade tests: test that skipping a meal calls `pantry.restoreBySkippedMeal` with correct ingredients; test servings change recalculates delta correctly
 
 ### Implementation for User Story 5
 
-- [ ] T035 [US5] Add `restoreBySkippedMeal(ingredients: Ingredient[])` to pantry service `src/services/pantry.ts`: reverse the ingredient deduction (add back to stock quantities)
-- [ ] T036 [US5] Extend `mealPlanner.skipMeal` in `src/services/meal-planner.ts` to call `pantry.restoreBySkippedMeal` with the skipped meal's recipe ingredients (fetch recipe from Notion before skip)
-- [ ] T037 [US5] Add `updateServings(id: string, newServings: number)` to `src/services/meal-planner.ts`: compute ingredient delta from old vs new servings; call `pantry.upsertItem` with delta to adjust stock; update MealEntry `Servings` in Notion
-- [ ] T038 [US5] Add `/servings <date> <type> <n>` command in `src/bot/handlers/command.ts` that calls `mealPlanner.updateServings` and replies with updated quantities
+- [x] T035 [US5] Add `restoreBySkippedMeal(ingredients: Ingredient[])` to pantry service `src/services/pantry.ts`: reverse the ingredient deduction (add back to stock quantities)
+- [x] T036 [US5] Extend `mealPlanner.skipMeal` in `src/services/meal-planner.ts` to call `pantry.restoreBySkippedMeal` with the skipped meal's recipe ingredients (fetch recipe from Notion before skip)
+- [x] T037 [US5] Add `updateServings(id: string, newServings: number)` to `src/services/meal-planner.ts`: compute ingredient delta from old vs new servings; call `pantry.upsertItem` with delta to adjust stock; update MealEntry `Servings` in Notion
+- [x] T038 [US5] Add `/servings <date> <type> <n>` command in `src/bot/handlers/command.ts` that calls `mealPlanner.updateServings` and replies with updated quantities
 
 **Checkpoint**: US5 functional — skip and servings-change cascade through pantry correctly
 

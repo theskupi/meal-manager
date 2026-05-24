@@ -177,6 +177,42 @@ export async function deductByMeal(ingredients: Ingredient[]): Promise<void> {
   }
 }
 
+export async function restoreBySkippedMeal(ingredients: Ingredient[]): Promise<void> {
+  for (const ingredient of ingredients) {
+    const response = await withRetry(() =>
+      notionClient.databases.query({
+        database_id: config.notion.pantryDatabaseId,
+        filter: {
+          property: 'Name',
+          title: { equals: ingredient.name.toLowerCase() },
+        },
+      }),
+    );
+
+    const existing = response.results.find((p): p is PageObjectResponse => 'properties' in p);
+    if (!existing) continue;
+
+    const item = parsePantryPage(existing);
+    if (!item) continue;
+
+    const incomingQty = ingredient.quantity ?? 0;
+    const converted = convertToUnit(incomingQty, ingredient.unit, item.unit);
+    if (converted === null) {
+      console.warn(
+        `[pantry] restoreBySkippedMeal: skipping ${ingredient.name} — unit mismatch (pantry: ${item.unit}, ingredient: ${ingredient.unit})`,
+      );
+      continue;
+    }
+    const newQuantity = item.quantity + converted;
+    await withRetry(() =>
+      notionClient.pages.update({
+        page_id: existing.id,
+        properties: { Quantity: { number: newQuantity } },
+      }),
+    );
+  }
+}
+
 export async function setThreshold(name: string, qty: number, unit: IngredientUnit): Promise<void> {
   const normalizedName = name.toLowerCase();
   const response = await withRetry(() =>

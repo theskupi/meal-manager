@@ -20,7 +20,8 @@ bot.command('start', (ctx) =>
       '🗓 /plan \\[date\\] — view meal plan for a date\n' +
       '➕ /addmeal \\<date\\> \\<type\\> \\<recipe\\> — add a meal\n' +
       '⏭ /skip \\<date\\> \\<type\\> — skip a meal\n' +
-      '✅ /eaten \\<date\\> \\<type\\> — mark meal as eaten\n\n' +
+      '✅ /eaten \\<date\\> \\<type\\> — mark meal as eaten\n' +
+      '🍽 /servings \\<date\\> \\<type\\> \\<n\\> — change serving count\n\n' +
       '*Pantry*\n' +
       '📦 /pantry — pantry stock\n' +
       '➕ /addpantry \\<name\\> \\<qty\\> \\<unit\\> — add item\n' +
