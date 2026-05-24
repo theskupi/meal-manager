@@ -136,6 +136,43 @@ and verifying that related meals in the plan have their portions recalculated co
 
 ---
 
+### User Story 6 — Automated Lunch Plan Generation (Priority: P1)
+
+A family member sends a single command or natural language message and instantly receives a
+full week's lunch plan generated from their recipe library. The system cycles through recipes
+in a freshly shuffled order for each generation run, assigning each recipe across consecutive
+days based on its serving count divided by the default household size. Existing planned lunches
+are never overwritten — the generator only fills empty days. The full plan and a grocery gap
+list for missing ingredients are returned in a single reply.
+
+**Why this priority**: This is the core automation value of the system. Without it, the meal
+plan must be populated entirely by hand, defeating the primary purpose of the assistant.
+
+**Independent Test**: With 3 recipes in the library, send `/generatemenu` — the bot creates
+lunch entries covering the full planning horizon (skipping already-planned days), then replies
+with the day-by-day plan followed by a grocery gap list of ingredients not in the pantry.
+
+**Acceptance Scenarios**:
+
+1. **Given** a recipe library with recipes of varying serving counts and no existing lunch
+   plan, **When** a user sends `/generatemenu` or a natural language equivalent, **Then** the
+   bot creates one lunch entry per day for the configured horizon using a shuffled recipe
+   rotation and replies with the full plan and grocery gap in one message.
+2. **Given** some lunch days are already planned, **When** the user triggers generation,
+   **Then** the system only creates entries for empty days and leaves existing entries
+   untouched.
+3. **Given** a recipe with 4 servings and a household size of 2, **When** the plan is
+   generated, **Then** that recipe covers 2 consecutive days with `servings: 2` per entry;
+   the grocery gap reflects total ingredients needed minus current pantry stock.
+4. **Given** the plan is cleared and generation is triggered twice in a row, **When** both
+   runs complete, **Then** the recipe sequence order differs between the two runs due to
+   per-run shuffling.
+5. **Given** the pantry is empty, **When** generation completes, **Then** the grocery gap
+   list contains all ingredients required by the generated lunches with no pantry prerequisite
+   blocking the generation itself.
+
+---
+
 ### Edge Cases
 
 - What happens when the cookbook photo contains multiple recipes on the same page?
@@ -180,6 +217,16 @@ and verifying that related meals in the plan have their portions recalculated co
 - **FR-014**: The meal plan MUST support a configurable planning horizon with a default of
   5 days and a maximum of 31 days (1 month); the horizon MUST be adjustable by the
   family administrator without a system restart.
+- **FR-015**: System MUST auto-generate lunch entries for the configured planning horizon
+  from the full recipe library: shuffle recipes randomly per generation run, then cycle
+  through the shuffled list assigning each recipe to `floor(recipe.servings / householdSize)`
+  consecutive days with `servings` set to `householdSize`; skip days that already have a
+  lunch entry; default `householdSize` is 2.
+- **FR-016**: System MUST accept `/generatemenu` slash command and natural language
+  equivalents (e.g. "generate my lunch plan", "generate menu for the week") to trigger
+  auto-generation; the single response MUST include the full day-by-day lunch plan AND a
+  grocery gap list (ingredients required minus current pantry stock, zero-shortfall items
+  excluded); pantry being empty or absent MUST NOT block generation.
 
 ### Key Entities _(include if feature involves data)_
 
@@ -214,6 +261,9 @@ and verifying that related meals in the plan have their portions recalculated co
   complete answer on the first attempt.
 - **SC-007**: Recipe suggestions for expiring ingredients are surfaced at least 48 hours
   before the expiry date with no missed alerts.
+- **SC-008**: A `/generatemenu` command with at least 1 recipe in the library produces a
+  complete lunch plan covering the full configured horizon within 30 seconds, with the
+  grocery gap list included in the same reply.
 
 ## Assumptions
 
@@ -228,3 +278,10 @@ and verifying that related meals in the plan have their portions recalculated co
   administrator before first use.
 - Recipes can only be added via photo ingestion or manual chat commands; importing from
   third-party recipe apps is out of scope for v1.
+  <<<<<<< Updated upstream
+- The nutritional macro balancing feature (US6) is a nice-to-have and will not block v1
+  release if the required data API has coverage gaps.
+  =======
+- The default household size for auto-generation is 2 persons per day; it is a configurable
+  value (`HOUSEHOLD_SIZE` env var, default `2`) and does not require a system restart to change.
+  > > > > > > > Stashed changes
