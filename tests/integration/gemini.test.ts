@@ -71,7 +71,7 @@ describe('extractRecipe', () => {
     await expect(extractRecipe('base64imagedata')).rejects.toBeInstanceOf(NoRecipeFoundError);
   });
 
-  it('falls back to pro model when flash returns fewer than 3 ingredients', async () => {
+  it('throws ExtractionError when flash returns fewer than 3 ingredients', async () => {
     const twoIngredientJson = JSON.stringify({
       title: 'Simple Dish',
       servings: 2,
@@ -83,19 +83,16 @@ describe('extractRecipe', () => {
       steps: ['Mix'],
       tags: [],
     });
-    mockGenerateContent
-      .mockResolvedValueOnce({ response: { text: () => twoIngredientJson } })
-      .mockResolvedValueOnce({ response: { text: () => validRecipeJson } });
+    mockResponse(twoIngredientJson);
 
-    const recipe = await extractRecipe('base64imagedata');
-
-    expect(mockGenerateContent).toHaveBeenCalledTimes(2);
-    expect(recipe.ingredients).toHaveLength(3);
+    await expect(extractRecipe('base64imagedata')).rejects.toBeInstanceOf(ExtractionError);
+    expect(mockGenerateContent).toHaveBeenCalledTimes(1);
   });
 
-  it('throws ExtractionError when JSON cannot be parsed even after retry', async () => {
+  it('throws ExtractionError when model returns unparseable response', async () => {
     mockResponse('this is not json at all !!!');
 
     await expect(extractRecipe('base64imagedata')).rejects.toBeInstanceOf(ExtractionError);
+    expect(mockGenerateContent).toHaveBeenCalledTimes(1);
   });
 });

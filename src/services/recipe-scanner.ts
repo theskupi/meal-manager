@@ -20,6 +20,11 @@ async function downloadPhotoAsBase64(fileId: string): Promise<string> {
 }
 
 export async function scanPhoto(fileId: string): Promise<Recipe> {
+  console.info('[recipe-scanner] Starting photo scan');
   const base64 = await downloadPhotoAsBase64(fileId);
-  return extractRecipe(base64);
+  const recipe = await extractRecipe(base64);
+  console.info(
+    `[recipe-scanner] Extraction complete — recipe: "${recipe.title}" (${recipe.ingredients.length} ingredients)`,
+  );
+  return recipe;
 }
