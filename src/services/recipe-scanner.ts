@@ -5,6 +5,32 @@ import { Recipe } from '../models/recipe';
 
 export { ExtractionError, NoRecipeFoundError } from '../integrations/gemini';
 
+const NETWORK_ERROR_CODES = new Set(['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'UND_ERR_SOCKET']);
+
+export async function retryOnNetworkError<T>(
+  fn: () => Promise<T>,
+  attempts = 3,
+  delayMs = 1000,
+): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const code =
+        err instanceof Error && 'code' in err ? (err as NodeJS.ErrnoException).code : undefined;
+      const isNetwork = code !== undefined && NETWORK_ERROR_CODES.has(code);
+      if (isNetwork && i < attempts - 1) {
+        await new Promise((r) => setTimeout(r, delayMs * Math.pow(2, i)));
+        lastErr = err;
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
+
 async function downloadPhotoAsBase64(fileId: string): Promise<string> {
   const file = await bot.telegram.getFile(fileId);
   if (!file.file_path) {
@@ -16,7 +42,7 @@ async function downloadPhotoAsBase64(fileId: string): Promise<string> {
   const url = `https://api.telegram.org/file/bot${config.telegram.botToken}/${file.file_path}`;
   let response: Response;
   try {
-    response = await fetch(url);
+    response = await retryOnNetworkError(() => fetch(url));
   } catch (err) {
     throw new Error(
       `Failed to download photo (network error): ${err instanceof Error ? err.message.replace(config.telegram.botToken, '<redacted>') : 'unknown'}`,
