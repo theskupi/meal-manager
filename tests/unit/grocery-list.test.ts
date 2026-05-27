@@ -59,11 +59,7 @@ function makeMealEntry(overrides: Partial<MealEntry> = {}): MealEntry {
   };
 }
 
-function makePantryItem(
-  name: string,
-  quantity: number,
-  unit: PantryItem['unit'],
-): PantryItem {
+function makePantryItem(name: string, quantity: number, unit: PantryItem['unit']): PantryItem {
   return {
     id: `pantry-${name}`,
     name,
@@ -73,11 +69,7 @@ function makePantryItem(
   };
 }
 
-function makeRecipePage(
-  recipeId: string,
-  ingredients: unknown[],
-  servings = 4,
-) {
+function makeRecipePage(recipeId: string, ingredients: unknown[], servings = 4) {
   return {
     id: recipeId,
     object: 'page',
@@ -94,11 +86,7 @@ describe('generate', () => {
   it('calculates shortfall correctly for a single ingredient', async () => {
     mockGetWeekPlan.mockResolvedValueOnce([makeMealEntry()]);
     mockRetrieve.mockResolvedValueOnce(
-      makeRecipePage(
-        'recipe-1',
-        [{ name: 'chicken', quantity: 400, unit: 'g', notes: null }],
-        4,
-      ),
+      makeRecipePage('recipe-1', [{ name: 'chicken', quantity: 400, unit: 'g', notes: null }], 4),
     );
     mockListItems.mockResolvedValueOnce([makePantryItem('chicken', 100, 'g')]);
 
@@ -115,11 +103,7 @@ describe('generate', () => {
   it('excludes items where pantry stock meets or exceeds requirements', async () => {
     mockGetWeekPlan.mockResolvedValueOnce([makeMealEntry()]);
     mockRetrieve.mockResolvedValueOnce(
-      makeRecipePage(
-        'recipe-1',
-        [{ name: 'flour', quantity: 200, unit: 'g', notes: null }],
-        4,
-      ),
+      makeRecipePage('recipe-1', [{ name: 'flour', quantity: 200, unit: 'g', notes: null }], 4),
     );
     mockListItems.mockResolvedValueOnce([makePantryItem('flour', 500, 'g')]);
 
@@ -134,18 +118,10 @@ describe('generate', () => {
     mockGetWeekPlan.mockResolvedValueOnce([entry1, entry2]);
     mockRetrieve
       .mockResolvedValueOnce(
-        makeRecipePage(
-          'recipe-1',
-          [{ name: 'milk', quantity: 500, unit: 'ml', notes: null }],
-          4,
-        ),
+        makeRecipePage('recipe-1', [{ name: 'milk', quantity: 500, unit: 'ml', notes: null }], 4),
       )
       .mockResolvedValueOnce(
-        makeRecipePage(
-          'recipe-2',
-          [{ name: 'milk', quantity: 2, unit: 'cup', notes: null }],
-          4,
-        ),
+        makeRecipePage('recipe-2', [{ name: 'milk', quantity: 2, unit: 'cup', notes: null }], 4),
       );
     mockListItems.mockResolvedValueOnce([]);
 
@@ -170,9 +146,7 @@ describe('generate', () => {
   });
 
   it('skips meal entries with no recipeId', async () => {
-    mockGetWeekPlan.mockResolvedValueOnce([
-      makeMealEntry({ recipeId: undefined }),
-    ]);
+    mockGetWeekPlan.mockResolvedValueOnce([makeMealEntry({ recipeId: undefined })]);
     mockListItems.mockResolvedValueOnce([]);
 
     const result = await generate();
@@ -181,24 +155,34 @@ describe('generate', () => {
     expect(result).toHaveLength(0);
   });
 
+  it('falls back to default servings when recipe has 0 servings', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+    mockGetWeekPlan.mockResolvedValueOnce([makeMealEntry({ servings: 4 })]);
+    mockRetrieve.mockResolvedValueOnce(
+      makeRecipePage('recipe-1', [{ name: 'rice', quantity: 200, unit: 'g', notes: null }], 0),
+    );
+    mockListItems.mockResolvedValueOnce([]);
+
+    const result = await generate();
+
+    // With 0 servings the fallback is 4, so scale = 4/4 = 1, quantity = 200
+    expect(result).toHaveLength(1);
+    expect(result[0]!.requiredQuantity).toBeCloseTo(200);
+    expect(result[0]!.shortfallQuantity).toBeCloseTo(200);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('invalid Servings value (0)'));
+    warnSpy.mockRestore();
+  });
+
   it('aggregates the same ingredient from multiple entries', async () => {
     const entry1 = makeMealEntry({ id: 'e1', recipeId: 'recipe-1', servings: 4 });
     const entry2 = makeMealEntry({ id: 'e2', recipeId: 'recipe-2', servings: 4 });
     mockGetWeekPlan.mockResolvedValueOnce([entry1, entry2]);
     mockRetrieve
       .mockResolvedValueOnce(
-        makeRecipePage(
-          'recipe-1',
-          [{ name: 'tomato', quantity: 200, unit: 'g', notes: null }],
-          4,
-        ),
+        makeRecipePage('recipe-1', [{ name: 'tomato', quantity: 200, unit: 'g', notes: null }], 4),
       )
       .mockResolvedValueOnce(
-        makeRecipePage(
-          'recipe-2',
-          [{ name: 'tomato', quantity: 150, unit: 'g', notes: null }],
-          4,
-        ),
+        makeRecipePage('recipe-2', [{ name: 'tomato', quantity: 150, unit: 'g', notes: null }], 4),
       );
     mockListItems.mockResolvedValueOnce([makePantryItem('tomato', 100, 'g')]);
 

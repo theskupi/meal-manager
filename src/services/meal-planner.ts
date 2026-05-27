@@ -10,6 +10,7 @@ import {
 } from '../models/meal-plan';
 import { Ingredient, IngredientUnitSchema } from '../models/recipe';
 import { restoreBySkippedMeal, deductByMeal } from './pantry';
+import { listRecipes } from './recipe-store';
 
 type NotionProperties = Parameters<typeof notionClient.pages.create>[0]['properties'];
 
@@ -330,4 +331,47 @@ export async function markConsumed(
       properties: { Status: { select: { name: 'consumed' } } },
     }),
   );
+}
+
+export async function generateLunchPlan(horizonDays: number): Promise<MealEntry[]> {
+  const today = new Date();
+  const dates: string[] = [];
+  for (let i = 0; i < horizonDays; i++) {
+    const d = new Date(today);
+    d.setUTCDate(today.getUTCDate() + i);
+    dates.push(d.toISOString().split('T')[0] as string);
+  }
+
+  const existing = await getWeekPlan(dates[0] as string, horizonDays);
+  const filledDates = new Set(
+    existing.filter((e) => e.mealType === 'lunch' && e.status !== 'skipped').map((e) => e.date),
+  );
+
+  const emptyDates = dates.filter((d) => !filledDates.has(d));
+  if (emptyDates.length === 0) return [];
+
+  const { recipes } = await listRecipes();
+  if (recipes.length === 0) return [];
+
+  const created: MealEntry[] = [];
+  for (let i = 0; i < emptyDates.length; i++) {
+    const date = emptyDates[i] as string;
+    const recipe = recipes[i % recipes.length]!;
+    const input: MealEntryInput = {
+      date,
+      mealType: 'lunch',
+      recipeTitle: recipe.title,
+      recipeId: recipe.id,
+      servings: recipe.servings,
+      status: 'planned',
+    };
+    try {
+      const entry = await createEntry(input);
+      created.push(entry);
+    } catch (err) {
+      console.warn(`[meal-planner] generateLunchPlan: skipping ${date} —`, err);
+    }
+  }
+
+  return created;
 }

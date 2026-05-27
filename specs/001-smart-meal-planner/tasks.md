@@ -220,10 +220,7 @@ trigger again, and verify recipe sequence order differs due to per-run shuffling
 - **US1 (Phase 5)**: Depends on Foundational; benefits from US2 (recipes needed for plan)
 - **US5 (Phase 6)**: Depends on US1 + US3 (needs both meal plan and pantry service)
 - **US4 (Phase 7)**: Depends on US3 + US1 (needs pantry and meal plan services)
-  <<<<<<< Updated upstream
-- # **US6 (Phase 8)**: Depends on US2 (needs Recipe model with macros field)
 - **US6 (Phase 8)**: Depends on US2 + US1 + US4 (recipe library, MealEntry CRUD, grocery-list service)
-  > > > > > > > Stashed changes
 - **Polish (Phase N)**: Depends on all desired user stories complete
 
 ### Within Each User Story
@@ -273,10 +270,7 @@ Task: T016 — src/integrations/gemini.ts
 4. US1 → meal schedule queries and adjustments via chat
 5. US5 → skipping meals cascades correctly
 6. US4 → grocery list on demand, restock alerts
-   <<<<<<< Updated upstream
-7. # US6 (optional) → macro queries
-8. US6 → `/generatemenu` auto-generates lunch plan with grocery gap
-   > > > > > > > Stashed changes
+7. US6 → `/generatemenu` auto-generates lunch plan with grocery gap
 
 ---
 

@@ -278,10 +278,5 @@ with the day-by-day plan followed by a grocery gap list of ingredients not in th
   administrator before first use.
 - Recipes can only be added via photo ingestion or manual chat commands; importing from
   third-party recipe apps is out of scope for v1.
-  <<<<<<< Updated upstream
-- The nutritional macro balancing feature (US6) is a nice-to-have and will not block v1
-  release if the required data API has coverage gaps.
-  =======
 - The default household size for auto-generation is 2 persons per day; it is a configurable
   value (`HOUSEHOLD_SIZE` env var, default `2`) and does not require a system restart to change.
-  > > > > > > > Stashed changes

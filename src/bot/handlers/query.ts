@@ -9,6 +9,10 @@ import { PantryItemInputSchema } from '../../models/pantry-item';
 import { IngredientUnitSchema } from '../../models/recipe';
 import { MealEntry, MealTypeSchema } from '../../models/meal-plan';
 
+function escapeMarkdown(text: string): string {
+  return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+}
+
 function todayIso(): string {
   return new Date().toISOString().split('T')[0] as string;
 }
@@ -247,7 +251,7 @@ export async function queryHandler(ctx: Context): Promise<void> {
         }
         const lines = items.map(
           (item: GroceryItem) =>
-            `• *${item.name}*: ${item.shortfallQuantity} ${item.unit} (have ${item.currentStock}, need ${item.requiredQuantity})`,
+            `• *${escapeMarkdown(item.name)}*: ${item.shortfallQuantity} ${escapeMarkdown(item.unit)} (have ${item.currentStock}, need ${item.requiredQuantity})`,
         );
         await ctx.reply(`🛒 *Grocery list:*\n\n${lines.join('\n')}`, { parse_mode: 'Markdown' });
       } catch (err) {
@@ -265,13 +269,31 @@ export async function queryHandler(ctx: Context): Promise<void> {
           await ctx.reply('📭 No recipes found or all lunch slots already filled.');
           break;
         }
-        const lines = entries.map(
-          (e: MealEntry) => `• *${e.date}* (${e.mealType}): ${e.recipeTitle} ×${e.servings}`,
+        const planLines = entries.map(
+          (e: MealEntry) =>
+            `• *${e.date}* (${e.mealType}): ${escapeMarkdown(e.recipeTitle)} ×${e.servings}`,
         );
-        await ctx.reply(
-          `🗓 *Lunch plan generated* (${entries.length} meal${entries.length !== 1 ? 's' : ''}):\n\n${lines.join('\n')}`,
-          { parse_mode: 'Markdown' },
-        );
+        const planSection = `🗓 *Lunch plan generated* (${entries.length} meal${entries.length !== 1 ? 's' : ''}):\n\n${planLines.join('\n')}`;
+
+        const groceryItems = await generateGroceryList();
+        const grocerySection =
+          groceryItems.length === 0
+            ? '🛒 *Grocery gap:* Your pantry covers everything — nothing to buy!'
+            : `🛒 *Grocery gap:*\n\n${groceryItems
+                .map(
+                  (item: GroceryItem) =>
+                    `• *${escapeMarkdown(item.name)}*: ${item.shortfallQuantity} ${escapeMarkdown(item.unit)} (have ${item.currentStock}, need ${item.requiredQuantity})`,
+                )
+                .join('\n')}`;
+
+        const combined = `${planSection}\n\n${grocerySection}`;
+        const TELEGRAM_MAX = 4096;
+        if (combined.length <= TELEGRAM_MAX) {
+          await ctx.reply(combined, { parse_mode: 'Markdown' });
+        } else {
+          await ctx.reply(planSection, { parse_mode: 'Markdown' });
+          await ctx.reply(grocerySection, { parse_mode: 'Markdown' });
+        }
       } catch (err) {
         console.error('[query-handler] Error generating menu:', err);
         await ctx.reply('⚠️ Failed to generate menu. Please try again.');

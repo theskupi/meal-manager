@@ -15,7 +15,13 @@ async function fetchRecipeIngredients(
     const props = (page as PageObjectResponse).properties as unknown as Record<string, unknown>;
 
     const servingsProp = props['Servings'] as { number: number | null } | undefined;
-    const recipeServings = servingsProp?.number ?? 4;
+    const recipeServingsRaw = servingsProp?.number;
+    if (recipeServingsRaw !== undefined && recipeServingsRaw !== null && recipeServingsRaw <= 0) {
+      console.warn(
+        `[grocery-list] Recipe ${recipeId} has invalid Servings value (${recipeServingsRaw}). Falling back to default of 4.`,
+      );
+    }
+    const recipeServings = recipeServingsRaw && recipeServingsRaw > 0 ? recipeServingsRaw : 4;
     const scale = entryServings / recipeServings;
 
     const ingredientsProp = props['Ingredients'] as
