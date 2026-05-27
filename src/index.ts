@@ -22,7 +22,10 @@ async function start(): Promise<void> {
     `[bot] Mode: ${config.app.isProduction ? 'production (webhook)' : 'development (long-polling)'}`,
   );
 
-  if (config.app.isProduction && config.telegram.webhookUrl) {
+  if (config.app.isProduction) {
+    if (!config.telegram.webhookUrl) {
+      throw new Error('TELEGRAM_WEBHOOK_URL must be set in production');
+    }
     await registerWebhook(config.telegram.webhookUrl);
     console.info('[bot] Running in webhook mode');
   } else {
