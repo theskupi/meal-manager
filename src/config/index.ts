@@ -27,7 +27,8 @@ function parseAllowedUserIds(raw: string): number[] {
     .filter(Boolean)
     .map((s) => {
       const n = parseInt(s, 10);
-      if (isNaN(n)) throw new Error(`Invalid Telegram user ID in TELEGRAM_ALLOWED_USER_IDS: "${s}"`);
+      if (isNaN(n))
+        throw new Error(`Invalid Telegram user ID in TELEGRAM_ALLOWED_USER_IDS: "${s}"`);
       return n;
     });
 }
@@ -53,6 +54,7 @@ export interface Config {
   app: {
     planHorizonDays: number;
     planHorizonMaxDays: number;
+    householdSize: number;
     nodeEnv: string;
     isDevelopment: boolean;
     isProduction: boolean;
@@ -82,6 +84,7 @@ function loadConfig(): Config {
     app: {
       planHorizonDays: optionalInt('PLAN_HORIZON_DAYS', 5),
       planHorizonMaxDays: optionalInt('PLAN_HORIZON_MAX_DAYS', 31),
+      householdSize: optionalInt('HOUSEHOLD_SIZE', 2),
       nodeEnv,
       isDevelopment: nodeEnv !== 'production',
       isProduction: nodeEnv === 'production',

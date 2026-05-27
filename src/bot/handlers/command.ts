@@ -13,7 +13,11 @@ import {
   skipMeal,
   markConsumed,
   updateServings,
+  generateLunchPlan,
 } from '../../services/meal-planner';
+import { generate as generateGroceryList } from '../../services/grocery-list';
+import { GroceryItem } from '../../models/grocery-list';
+import { config } from '../../config';
 import { IngredientUnitSchema } from '../../models/recipe';
 import { MealTypeSchema, MealEntry } from '../../models/meal-plan';
 
@@ -406,6 +410,45 @@ export function registerCommandHandlers(bot: Telegraf<Context>): void {
       }
       console.error('[eaten-command] Error marking meal consumed:', err);
       await ctx.reply('⚠️ Failed to mark meal as consumed. Please try again.');
+    }
+  });
+
+  bot.command('groceries', async (ctx) => {
+    try {
+      const items = await generateGroceryList();
+      if (items.length === 0) {
+        await ctx.reply('👌 Your pantry covers everything — nothing to buy!');
+        return;
+      }
+      const lines = items.map(
+        (item: GroceryItem) =>
+          `• *${item.name}*: ${item.shortfallQuantity} ${item.unit} (have ${item.currentStock}, need ${item.requiredQuantity})`,
+      );
+      await ctx.reply(`🛒 *Grocery list:*\n\n${lines.join('\n')}`, { parse_mode: 'Markdown' });
+    } catch (err) {
+      console.error('[groceries-command] Error fetching grocery list:', err);
+      await ctx.reply('⚠️ Could not generate grocery list right now. Please try again.');
+    }
+  });
+
+  bot.command('generatemenu', async (ctx) => {
+    try {
+      await ctx.reply('⏳ Generating lunch plan…');
+      const entries = await generateLunchPlan(config.app.planHorizonDays);
+      if (entries.length === 0) {
+        await ctx.reply('📭 No recipes found or all lunch slots already filled.');
+        return;
+      }
+      const lines = entries.map(
+        (e: MealEntry) => `• *${e.date}* (${e.mealType}): ${e.recipeTitle} ×${e.servings}`,
+      );
+      await ctx.reply(
+        `🗓 *Lunch plan generated* (${entries.length} meal${entries.length !== 1 ? 's' : ''}):\n\n${lines.join('\n')}`,
+        { parse_mode: 'Markdown' },
+      );
+    } catch (err) {
+      console.error('[generatemenu-command] Error generating menu:', err);
+      await ctx.reply('⚠️ Failed to generate menu. Please try again.');
     }
   });
 

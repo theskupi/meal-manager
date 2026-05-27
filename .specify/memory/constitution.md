@@ -44,7 +44,7 @@ is unavailable; the fallback MUST be documented in the service layer.
 ### III. External API Abstraction
 
 Every external service integration (Notion API, Telegram Bot API, Groq API, OpenAI API, Google
-Gemini API, Edamam API, Open Food Facts API) MUST be encapsulated behind a dedicated, typed
+Gemini API) MUST be encapsulated behind a dedicated, typed
 service interface in `src/integrations/`. API credentials MUST be loaded exclusively from
 environment variables — hardcoded keys are prohibited. Each integration service MUST be
 independently testable via dependency injection with mock adapters.
@@ -82,7 +82,6 @@ Approved external services:
 - **Groq API (Llama 3)** — text processing, NLP, and JSON schema enforcement
 - **OpenAI API (GPT-4o-mini)** — multi-modal vision (cookbook photo parsing)
 - **Google Gemini API** — fallback multi-modal vision
-- **Edamam API / Open Food Facts API** — nutritional data lookups
 
 ## Development Workflow Standards
 

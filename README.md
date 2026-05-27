@@ -19,4 +19,3 @@ A personalized, AI-driven meal planning and inventory tracking system. This proj
 - **AI & LLM Orchestration:**
   - **Groq API (Llama 3):** For lightning-fast, cost-effective text processing, natural language adjustments, and JSON schema enforcement.
   - **OpenAI API (GPT-4o-mini) / Google Gemini API:** For advanced multi-modal vision tasks (parsing cookbook photos).
-- **Nutritional Data:** Edamam API / Open Food Facts API

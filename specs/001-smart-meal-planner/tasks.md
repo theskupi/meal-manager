@@ -13,12 +13,12 @@ integration tests required for each external API boundary).
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and
 testing. Implementation order follows user direction: US2 (recipe scan) first, then US3
-(pantry), US1 (chat/plan), US5 (cascade), US4 (groceries).
+(pantry), US1 (chat/plan), US5 (cascade), US4 (groceries), US6 (lunch auto-generation).
 
 ## Format: `[ID] [P?] [Story?] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (US1–US5)
+- **[Story]**: Which user story this task belongs to (US1–US6)
 - Include exact file paths in descriptions
 
 ---
@@ -134,14 +134,14 @@ are restored; generate grocery list → reflects reduced requirements
 
 ### Tests for User Story 5 ⚠️ (Write FIRST — must FAIL before implementation)
 
-- [x] T034 [P] [US5] Extend `tests/unit/meal-planner.test.ts` with cascade tests: test that skipping a meal calls `pantry.restoreBySkippedMeal` with correct ingredients; test servings change recalculates delta correctly
+- [ ] T034 [P] [US5] Extend `tests/unit/meal-planner.test.ts` with cascade tests: test that skipping a meal calls `pantry.restoreBySkippedMeal` with correct ingredients; test servings change recalculates delta correctly
 
 ### Implementation for User Story 5
 
-- [x] T035 [US5] Add `restoreBySkippedMeal(ingredients: Ingredient[])` to pantry service `src/services/pantry.ts`: reverse the ingredient deduction (add back to stock quantities)
-- [x] T036 [US5] Extend `mealPlanner.skipMeal` in `src/services/meal-planner.ts` to call `pantry.restoreBySkippedMeal` with the skipped meal's recipe ingredients (fetch recipe from Notion before skip)
-- [x] T037 [US5] Add `updateServings(id: string, newServings: number)` to `src/services/meal-planner.ts`: compute ingredient delta from old vs new servings; call `pantry.upsertItem` with delta to adjust stock; update MealEntry `Servings` in Notion
-- [x] T038 [US5] Add `/servings <date> <type> <n>` command in `src/bot/handlers/command.ts` that calls `mealPlanner.updateServings` and replies with updated quantities
+- [ ] T035 [US5] Add `restoreBySkippedMeal(ingredients: Ingredient[])` to pantry service `src/services/pantry.ts`: reverse the ingredient deduction (add back to stock quantities)
+- [ ] T036 [US5] Extend `mealPlanner.skipMeal` in `src/services/meal-planner.ts` to call `pantry.restoreBySkippedMeal` with the skipped meal's recipe ingredients (fetch recipe from Notion before skip)
+- [ ] T037 [US5] Add `updateServings(id: string, newServings: number)` to `src/services/meal-planner.ts`: compute ingredient delta from old vs new servings; call `pantry.upsertItem` with delta to adjust stock; update MealEntry `Servings` in Notion
+- [ ] T038 [US5] Add `/servings <date> <type> <n>` command in `src/bot/handlers/command.ts` that calls `mealPlanner.updateServings` and replies with updated quantities
 
 **Checkpoint**: US5 functional — skip and servings-change cascade through pantry correctly
 
@@ -156,16 +156,44 @@ items with correct shortfall quantities and no duplicates
 
 ### Tests for User Story 4 ⚠️ (Write FIRST — must FAIL before implementation)
 
-- [ ] T039 [P] [US4] Write unit tests for grocery list service in `tests/unit/grocery-list.test.ts`: mock mealPlanner and pantry services; test that shortfall is calculated correctly, zero-shortfall items are excluded, unit-mismatched items are treated as separate line items
+- [x] T039 [P] [US4] Write unit tests for grocery list service in `tests/unit/grocery-list.test.ts`: mock mealPlanner and pantry services; test that shortfall is calculated correctly, zero-shortfall items are excluded, unit-mismatched items are treated as separate line items
 
 ### Implementation for User Story 4
 
-- [ ] T040 [P] [US4] Create `GroceryItem` type in `src/models/grocery-list.ts`; update `src/models/index.ts`
-- [ ] T041 [US4] Create grocery list service `src/services/grocery-list.ts`: implement `generate(): Promise<GroceryItem[]>` — fetch upcoming MealEntries within horizon, aggregate ingredient requirements per recipe servings, fetch current PantryItems, compute shortfall (required - stock), return items where shortfall > 0
-- [ ] T042 [US4] Wire threshold alerts into pantry upsert: after every `pantry.upsertItem` call, invoke `notifier.checkThresholds` and dispatch restock alerts for any newly-below-threshold items in `src/services/pantry.ts`
-- [ ] T043 [US4] Add `/groceries` command in `src/bot/handlers/command.ts`: call `groceryList.generate()`, format as bulleted list grouped by unit; add `/setthreshold <item> <qty> <unit>` command calling `pantry.setThreshold`; register both in `src/index.ts`
+- [x] T040 [P] [US4] Create `GroceryItem` type in `src/models/grocery-list.ts`; update `src/models/index.ts`
+- [x] T041 [US4] Create grocery list service `src/services/grocery-list.ts`: implement `generate(): Promise<GroceryItem[]>` — fetch upcoming MealEntries within horizon, aggregate ingredient requirements per recipe servings, fetch current PantryItems, compute shortfall (required - stock), return items where shortfall > 0
+- [x] T042 [US4] Wire threshold alerts into pantry upsert: after every `pantry.upsertItem` call, invoke `notifier.checkThresholds` and dispatch restock alerts for any newly-below-threshold items in `src/services/pantry.ts`
+- [x] T043 [US4] Add `/groceries` command in `src/bot/handlers/command.ts`: call `groceryList.generate()`, format as bulleted list grouped by unit; add `/setthreshold <item> <qty> <unit>` command calling `pantry.setThreshold`; register both in `src/index.ts`
 
 **Checkpoint**: US4 functional — grocery list generated on demand, restock alerts firing
+
+---
+
+## Phase 8: User Story 6 — Automated Lunch Plan Generation (Priority: P1) 🎯
+
+**Goal**: A user sends `/generatemenu` and receives a complete week's lunch plan generated
+from the recipe library plus a grocery gap list in a single bot reply
+
+**Independent Test**: With 3 recipes in the recipe library, send `/generatemenu` — bot
+creates lunch entries covering the full planning horizon (skipping already-planned days)
+and replies with the day-by-day plan plus grocery gap list in one message; clear the plan,
+trigger again, and verify recipe sequence order differs due to per-run shuffling
+
+**Depends on**: US2 (recipe library), US1 (MealEntry CRUD + horizon config), US4
+(grocery-list service for gap computation)
+
+### Tests for User Story 6 ⚠️ (Write FIRST — must FAIL before implementation)
+
+- [x] T044 [P] [US6] Extend `tests/unit/meal-planner.test.ts` with `generateLunchPlan` tests: mock `recipeStore.listRecipes` and `notionClient`; test (a) two successive calls produce different recipe order (shuffle), (b) recipe with servings=4 and householdSize=2 covers 2 consecutive days, (c) existing lunch entries are skipped, (d) empty pantry does not block generation
+
+### Implementation for User Story 6
+
+- [x] T045 [P] [US6] Add `HOUSEHOLD_SIZE` env var (default `2`) to `src/config/index.ts` and to `.env.example`; expose as `config.householdSize: number`
+- [x] T046 [US6] Add `generateLunchPlan(horizonDays: number): Promise<MealEntry[]>` to `src/services/meal-planner.ts`: (1) fetch all recipes via `recipeStore.listRecipes`; (2) Fisher-Yates shuffle per run; (3) iterate upcoming dates within horizon, skip dates that already have a `lunch` MealEntry; (4) for each recipe assign `floor(recipe.servings / config.householdSize)` consecutive empty days with `servings: config.householdSize`; (5) batch-create MealEntries in Notion; return created entries
+- [x] T047 [US6] Add `/generatemenu` command in `src/bot/handlers/command.ts`: call `mealPlanner.generateLunchPlan(config.planHorizonDays)`, then call `groceryList.generate()`; format single reply — day-by-day plan (one line per day) followed by grocery gap section (omit zero-shortfall items; if pantry is empty show all required ingredients); register command in `src/index.ts`
+- [x] T048 [US6] Extend Groq `parseIntent` in `src/integrations/groq.ts` to recognise `generate_menu` intent (e.g. "generate my lunch plan", "generate menu for the week"); route `generate_menu` intent in `src/bot/handlers/query.ts` to the same handler logic as `/generatemenu`
+
+**Checkpoint**: US6 fully functional — `/generatemenu` produces a complete lunch plan + grocery gap in one message
 
 ---
 
@@ -192,6 +220,7 @@ items with correct shortfall quantities and no duplicates
 - **US1 (Phase 5)**: Depends on Foundational; benefits from US2 (recipes needed for plan)
 - **US5 (Phase 6)**: Depends on US1 + US3 (needs both meal plan and pantry service)
 - **US4 (Phase 7)**: Depends on US3 + US1 (needs pantry and meal plan services)
+- **US6 (Phase 8)**: Depends on US2 + US1 + US4 (recipe library, MealEntry CRUD, grocery-list service)
 - **Polish (Phase N)**: Depends on all desired user stories complete
 
 ### Within Each User Story
@@ -241,6 +270,7 @@ Task: T016 — src/integrations/gemini.ts
 4. US1 → meal schedule queries and adjustments via chat
 5. US5 → skipping meals cascades correctly
 6. US4 → grocery list on demand, restock alerts
+7. US6 → `/generatemenu` auto-generates lunch plan with grocery gap
 
 ---
 
