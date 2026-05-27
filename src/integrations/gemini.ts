@@ -38,13 +38,14 @@ Return ONLY a valid JSON object matching this exact structure. Do not include an
     }
   ],
   "steps": [
-    "string — step instruction"
+    "string — step instruction, written in the same language as the recipe text in the image"
   ],
   "tags": ["string — descriptive tag"]
 }
 
 If the image does not contain a recipe, return: {"error": "no_recipe_found"}
-If a field cannot be determined, use null for optional fields or a sensible default.`;
+If a field cannot be determined, use null for optional fields or a sensible default.
+Preserve the original language of all text fields (title, steps, ingredient names, notes) exactly as it appears in the image. Do not translate anything.`;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
