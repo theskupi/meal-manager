@@ -1,36 +1,16 @@
 import { config } from './config';
 import { bot, registerWebhook } from './integrations';
 import { authMiddleware } from './bot/middleware/auth';
+import { rateLimitMiddleware } from './bot/middleware/rate-limit';
 import { photoHandler } from './bot/handlers/photo';
 import { registerCommandHandlers } from './bot/handlers/command';
 import { queryHandler } from './bot/handlers/query';
 import { runDailyChecks } from './services/notifier';
 
 bot.use(authMiddleware);
+bot.use(rateLimitMiddleware);
 
 bot.command('ping', (ctx) => ctx.reply('pong 🏓'));
-
-bot.command('start', (ctx) =>
-  ctx.reply(
-    '👋 *PapiPap* — your kitchen assistant is running\\!\n\n' +
-      '*Recipes*\n' +
-      '📸 Send a cookbook photo to scan a recipe\n' +
-      '📋 /recipes — view saved recipes\n\n' +
-      '*Meal Planning*\n' +
-      '🗓 /plan \\[date\\] — view meal plan for a date\n' +
-      '➕ /addmeal \\<date\\> \\<type\\> \\<recipe\\> — add a meal\n' +
-      '⏭ /skip \\<date\\> \\<type\\> — skip a meal\n' +
-      '✅ /eaten \\<date\\> \\<type\\> — mark meal as eaten\n' +
-      '🍽 /servings \\<date\\> \\<type\\> \\<n\\> — change serving count\n\n' +
-      '*Pantry*\n' +
-      '📦 /pantry — pantry stock\n' +
-      '➕ /addpantry \\<name\\> \\<qty\\> \\<unit\\> — add item\n' +
-      '🔔 /setthreshold \\<name\\> \\<qty\\> \\<unit\\> — restock alert\n\n' +
-      '🛒 /groceries — shopping list\n' +
-      '🗓 /generatemenu — generate lunch plan for the week',
-    { parse_mode: 'MarkdownV2' },
-  ),
-);
 
 registerCommandHandlers(bot);
 bot.on('photo', photoHandler);
@@ -41,7 +21,6 @@ async function start(): Promise<void> {
   console.info(
     `[bot] Mode: ${config.app.isProduction ? 'production (webhook)' : 'development (long-polling)'}`,
   );
-  console.info(`[bot] Whitelisted user IDs: ${config.telegram.allowedUserIds.join(', ')}`);
 
   if (config.app.isProduction && config.telegram.webhookUrl) {
     await registerWebhook(config.telegram.webhookUrl);

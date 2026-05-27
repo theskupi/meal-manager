@@ -10,17 +10,19 @@ Gemini API client in `src/integrations/gemini.ts`.
 ## Request Contract
 
 ### Model
-Primary: `gemini-1.5-flash`
-Fallback: `gemini-1.5-pro` (triggered when Flash returns < 3 ingredients)
+
+`gemini-2.5-flash`
 
 ### Input
-| Parameter | Value |
-|-----------|-------|
-| `mimeType` | `image/jpeg` |
-| `data` | Base64-encoded photo bytes (downloaded from Telegram CDN) |
-| `prompt` | See below |
+
+| Parameter  | Value                                                     |
+| ---------- | --------------------------------------------------------- |
+| `mimeType` | `image/jpeg`                                              |
+| `data`     | Base64-encoded photo bytes (downloaded from Telegram CDN) |
+| `prompt`   | See below                                                 |
 
 ### Prompt Template
+
 ```
 You are a recipe extraction assistant. Analyse the cookbook photo and extract the recipe.
 
@@ -55,6 +57,7 @@ If a field cannot be determined, use null for optional fields or a sensible defa
 ## Response Contract
 
 ### Success response
+
 ```json
 {
   "title": "Spaghetti Carbonara",
@@ -79,6 +82,7 @@ If a field cannot be determined, use null for optional fields or a sensible defa
 ```
 
 ### No-recipe response
+
 ```json
 { "error": "no_recipe_found" }
 ```
@@ -90,22 +94,21 @@ If a field cannot be determined, use null for optional fields or a sensible defa
 ```
 Gemini raw text response
         ↓
-JSON.parse()  →  SyntaxError? → Groq JSON repair → retry parse
+JSON.parse()  →  SyntaxError? → return ExtractionError
         ↓
 RecipeSchema.safeParse() (Zod)
         ↓
-  Valid?  →  return Recipe
-  Invalid?
-    └─ ingredient count < 3? → retry with gemini-1.5-pro
-    └─ still invalid? → return ExtractionError
+  Valid & ingredients ≥ 3?  →  return Recipe
+  Otherwise               →  return ExtractionError
 ```
 
 ### Zod RecipeSchema (source of truth in `src/models/recipe.ts`)
+
 ```typescript
 const IngredientSchema = z.object({
   name: z.string().min(1),
   quantity: z.number().positive(),
-  unit: z.enum(['g','kg','ml','l','cup','tbsp','tsp','piece','slice','other']),
+  unit: z.enum(['g', 'kg', 'ml', 'l', 'cup', 'tbsp', 'tsp', 'piece', 'slice', 'other']),
   notes: z.string().nullable(),
 });
 
@@ -123,14 +126,13 @@ const RecipeSchema = z.object({
 
 ## Error Handling
 
-| Condition | Action |
-|-----------|--------|
-| HTTP 429 (rate limit) | Exponential backoff: 4 s, 8 s, 16 s (max 3 retries) |
-| HTTP 5xx | Exponential backoff: 2 s, 4 s, 8 s (max 3 retries) |
-| `{"error": "no_recipe_found"}` | Notify user: "Couldn't find a recipe in this photo." |
-| Zod validation fail, Flash model | Retry with `gemini-1.5-pro` once |
-| Zod validation fail, Pro model | Return extraction error to user |
-| Network timeout (> 30 s) | Return timeout error to user |
+| Condition                                | Action                                               |
+| ---------------------------------------- | ---------------------------------------------------- |
+| HTTP 429 (rate limit)                    | Exponential backoff: 4 s, 8 s, 16 s (max 3 retries)  |
+| HTTP 5xx                                 | Exponential backoff: 2 s, 4 s, 8 s (max 3 retries)   |
+| `{"error": "no_recipe_found"}`           | Notify user: "Couldn't find a recipe in this photo." |
+| JSON unparseable or ingredient count < 3 | Return extraction error to user                      |
+| Network timeout (> 30 s)                 | Return timeout error to user                         |
 
 ---
 

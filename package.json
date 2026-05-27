@@ -11,6 +11,7 @@
     "start": "node dist/index.js",
     "test": "jest --testPathPattern=unit",
     "test:integration": "jest --testPathPattern=integration",
+    "test:coverage": "jest --testPathPattern=unit --coverage",
     "test:all": "jest",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix"

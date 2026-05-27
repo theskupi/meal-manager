@@ -63,12 +63,12 @@ within 30 s; verify recipe entry exists in Notion Recipes database with ≥ 3 in
 ### Tests for User Story 2 ⚠️ (Write FIRST — must FAIL before implementation)
 
 - [x] T013 [P] [US2] Write unit tests for recipe scanner in `tests/unit/recipe-scanner.test.ts`: mock Gemini and Groq clients; test happy path (valid JSON returned), Zod validation failure → Groq repair path, no-recipe response, timeout handling
-- [x] T014 [P] [US2] Write integration tests for Gemini client in `tests/integration/gemini.test.ts`: mock `@google/generative-ai` HTTP layer; test Flash primary / Pro fallback trigger, retry on 429, base64 encoding of photo bytes
+- [x] T014 [P] [US2] Write integration tests for Gemini client in `tests/integration/gemini.test.ts`: mock `@google/generative-ai` HTTP layer; test valid extraction, no-recipe response, insufficient ingredients, unparseable response, retry on 429
 
 ### Implementation for User Story 2
 
 - [x] T015 [P] [US2] Create `Ingredient` and `Recipe` Zod schemas and inferred TypeScript types in `src/models/recipe.ts`; include `RecipeSchema`, `IngredientSchema`, `IngredientUnit` enum (g, kg, ml, l, cup, tbsp, tsp, piece, slice, other); update `src/models/index.ts`
-- [x] T016 [P] [US2] Create Gemini API client `src/integrations/gemini.ts`: initialise `@google/generative-ai` with `GEMINI_API_KEY`; implement `extractRecipe(imageBase64: string): Promise<Recipe>` — use `gemini-1.5-flash` primary, fall back to `gemini-1.5-pro` when < 3 ingredients parsed; include retry logic for 429/5xx per `contracts/gemini-recipe-extraction.md`; update `src/integrations/index.ts`
+- [x] T016 [P] [US2] Create Gemini API client `src/integrations/gemini.ts`: initialise `@google/generative-ai` with `GEMINI_API_KEY`; implement `extractRecipe(imageBase64: string): Promise<Recipe>` — use `gemini-2.5-flash`; throw `ExtractionError` when < 3 ingredients parsed or response is unparseable; include retry logic for 429/5xx per `contracts/gemini-recipe-extraction.md`; update `src/integrations/index.ts`
 - [x] T017 [US2] Create Groq API client `src/integrations/groq.ts`: initialise `groq-sdk` with `GROQ_API_KEY`; implement `repairJson(rawText: string): Promise<string>` using the JSON repair prompt from `contracts/gemini-recipe-extraction.md`; export stub `parseIntent` for later use in US1/US3; update `src/integrations/index.ts`
 - [x] T018 [US2] Create recipe scanner service `src/services/recipe-scanner.ts`: implement `scanPhoto(fileId: string): Promise<Recipe>` — download highest-res photo from Telegram CDN using bot file API, base64-encode bytes, call `geminiClient.extractRecipe`, validate with `RecipeSchema.safeParse`, call `groqClient.repairJson` on parse failure and retry once, throw `ExtractionError` if still invalid
 - [x] T019 [US2] Create recipe store service `src/services/recipe-store.ts`: implement `saveRecipe(recipe: Recipe): Promise<string>` (returns Notion page URL) and `listRecipes(page: number): Promise<Recipe[]>` (page size 10) using `notionClient` against `NOTION_RECIPES_DB_ID`; serialise `ingredients` and `steps` as JSON strings in Rich Text properties per `contracts/notion-schemas.md`
@@ -201,11 +201,11 @@ trigger again, and verify recipe sequence order differs due to per-run shuffling
 
 **Purpose**: Production readiness, logging, documentation, and final validation
 
-- [ ] T049 [P] Add `/help` command listing all available commands and `/start` welcome message in `src/bot/handlers/command.ts`
-- [ ] T050 [P] Add structured console logging to all services and handlers: prefix logs with `[service-name]`, use `error`/`warn`/`info`/`debug` levels, never log API keys or user message content
-- [ ] T051 Create `Dockerfile` at repo root: `FROM node:20-alpine`, copy `package.json` + `tsconfig.json`, run `npm ci`, copy `src/`, run `npm run build`, `CMD ["node", "dist/index.js"]`; add `.dockerignore`
-- [ ] T052 [P] Write integration tests for Notion client in `tests/integration/notion.test.ts` (mock HTTP layer; test throttle behaviour, retry on 429, upsert pattern) and for Groq client in `tests/integration/groq.test.ts` (mock responses; test intent parsing, JSON repair)
-- [ ] T053 Run `quickstart.md` validation: set up all three Notion databases per `contracts/notion-schemas.md`, configure `.env`, run `npm run dev`, send a test cookbook photo, verify Notion entry; fix any gaps found
+- [x] T049 [P] Add `/help` command listing all available commands and `/start` welcome message in `src/bot/handlers/command.ts`
+- [x] T050 [P] Add structured console logging to all services and handlers: prefix logs with `[service-name]`, use `error`/`warn`/`info`/`debug` levels, never log API keys or user message content
+- [x] T051 Create `Dockerfile` at repo root: `FROM node:20-alpine`, copy `package.json` + `tsconfig.json`, run `npm ci`, copy `src/`, run `npm run build`, `CMD ["node", "dist/index.js"]`; add `.dockerignore`
+- [x] T052 [P] Write integration tests for Notion client in `tests/integration/notion.test.ts` (mock HTTP layer; test throttle behaviour, retry on 429, upsert pattern) and for Groq client in `tests/integration/groq.test.ts` (mock responses; test intent parsing, JSON repair)
+- [x] T053 Run `quickstart.md` validation: set up all three Notion databases per `contracts/notion-schemas.md`, configure `.env`, run `npm run dev`, send a test cookbook photo, verify Notion entry; fix any gaps found
 
 ---
 

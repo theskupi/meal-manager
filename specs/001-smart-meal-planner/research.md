@@ -24,12 +24,12 @@ handles Telegram file downloads and photo messages natively.
 
 ## 2. Gemini API — Vision Model Choice
 
-**Decision**: `gemini-1.5-flash` as primary; `gemini-1.5-pro` as fallback for complex pages
+**Decision**: `gemini-2.5-flash` only — no pro fallback
 
-**Rationale**: Gemini Flash is optimised for speed and cost at the expense of some accuracy.
-For structured recipe extraction from clear cookbook photos, Flash accuracy is sufficient.
-Flash free tier: 15 req/min, 1 million tokens/day. Pro fallback is triggered when Flash
-returns an incomplete or low-confidence extraction (fewer than 3 ingredients parsed).
+**Rationale**: Gemini Flash is optimised for speed and cost. For structured recipe extraction
+from cookbook photos, Flash accuracy is sufficient. Responses with fewer than 3 ingredients
+are treated as extraction failures rather than triggering a more expensive model call.
+Flash free tier: 15 req/min, 1 million tokens/day.
 
 **Recipe extraction approach**:
 

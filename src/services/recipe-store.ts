@@ -51,6 +51,7 @@ export async function saveRecipe(recipe: Recipe): Promise<{ id: string; url: str
 
   const url =
     'url' in page ? (page.url as string) : `https://www.notion.so/${page.id.replace(/-/g, '')}`;
+  console.info(`[recipe-store] Saved recipe "${recipe.title}" (id: ${page.id})`);
   return { id: page.id, url };
 }
 
@@ -129,6 +130,7 @@ export async function listRecipes(startCursor?: string): Promise<{
     })
     .filter((r): r is StoredRecipe => r !== null);
 
+  console.debug(`[recipe-store] listRecipes returned ${recipes.length} recipe(s)`);
   return {
     recipes,
     nextCursor: response.next_cursor ?? null,

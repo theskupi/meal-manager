@@ -8,10 +8,7 @@ import { GroceryItem } from '../../models/grocery-list';
 import { PantryItemInputSchema } from '../../models/pantry-item';
 import { IngredientUnitSchema } from '../../models/recipe';
 import { MealEntry, MealTypeSchema } from '../../models/meal-plan';
-
-function escapeMarkdown(text: string): string {
-  return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
-}
+import { escapeMarkdown } from '../utils';
 
 function todayIso(): string {
   return new Date().toISOString().split('T')[0] as string;

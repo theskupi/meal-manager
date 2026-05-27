@@ -103,9 +103,10 @@ accounts to verify the connection.
 
 1. Find a clear photo of a cookbook recipe page.
 2. Send the photo to your bot in Telegram.
-3. The bot should reply: "📸 Got it! Scanning recipe, please wait…"
-4. Within ~15 seconds: "✅ Recipe saved: *{RecipeName}* ({n} ingredients). View it in Notion: {link}"
-5. Open your Notion Recipes database and verify the new entry.
+3. The bot should reply: "📸 Got your photo! Scanning for a recipe…"
+4. The message is updated in-place: "⏳ Found _{RecipeName}_ — saving to Notion…"
+5. Final message: "✅ _{RecipeName}_ saved!" with ingredient list and a Notion link.
+6. Open your Notion Recipes database and verify the new entry.
 
 ---
 
@@ -115,16 +116,21 @@ accounts to verify the connection.
 # Unit tests only
 npm test
 
-# With coverage
+# Unit tests with coverage report
 npm run test:coverage
 
-# Integration tests (requires valid API keys in .env)
+# Integration tests (mocked — no real API keys required)
 npm run test:integration
+
+# All tests
+npm run test:all
 ```
 
 ---
 
 ## Production deployment
+
+### Direct (Node.js)
 
 1. Set `NODE_ENV=production` in your environment.
 2. Set a public HTTPS webhook URL: `TELEGRAM_WEBHOOK_URL=https://yourdomain.com/bot`
@@ -134,14 +140,24 @@ npm run test:integration
 The bot will register its webhook with Telegram on startup and switch from polling to
 webhook mode automatically.
 
+### Docker
+
+```bash
+docker build -t papipap .
+docker run -d --env-file .env papipap
+```
+
+The `Dockerfile` at the repo root builds a production image from `node:20-alpine`.
+Pass environment variables via `--env-file .env` or your orchestrator's secret store.
+
 ---
 
 ## Troubleshooting
 
-| Symptom | Likely cause | Fix |
-|---------|-------------|-----|
-| Bot ignores all messages | User ID not in whitelist | Add your ID to `TELEGRAM_ALLOWED_USER_IDS` |
-| Recipe scan returns "Couldn't extract recipe" | Photo too dark / angled | Retake with better lighting |
-| Notion write fails with 400 | Select option not pre-populated | Add missing options in Notion database settings |
-| Gemini 429 errors | Free tier rate limit hit | Wait 1 minute; consider upgrading Gemini plan |
-| Bot not responding at all | Bot token invalid or polling error | Check `TELEGRAM_BOT_TOKEN` and restart |
+| Symptom                                       | Likely cause                       | Fix                                             |
+| --------------------------------------------- | ---------------------------------- | ----------------------------------------------- |
+| Bot ignores all messages                      | User ID not in whitelist           | Add your ID to `TELEGRAM_ALLOWED_USER_IDS`      |
+| Recipe scan returns "Couldn't extract recipe" | Photo too dark / angled            | Retake with better lighting                     |
+| Notion write fails with 400                   | Select option not pre-populated    | Add missing options in Notion database settings |
+| Gemini 429 errors                             | Free tier rate limit hit           | Wait 1 minute; consider upgrading Gemini plan   |
+| Bot not responding at all                     | Bot token invalid or polling error | Check `TELEGRAM_BOT_TOKEN` and restart          |

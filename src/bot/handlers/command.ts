@@ -1,4 +1,5 @@
 import { Telegraf, Context } from 'telegraf';
+import { escapeMarkdown } from '../utils';
 import { listRecipes, findRecipeByTitle } from '../../services/recipe-store';
 import {
   upsertItem,
@@ -149,7 +150,50 @@ function parseDateMealType(argsStr: string): { date: string; mealType: string } 
   return { date, mealType };
 }
 
+const HELP_TEXT =
+  '*PapiPap — Available commands*\n\n' +
+  '*Recipes*\n' +
+  '`/scan` — prompt to send a cookbook photo\n' +
+  '`/recipes` — list saved recipes\n\n' +
+  '*Meal Planning*\n' +
+  '`/plan [date]` — view meal plan (default: today)\n' +
+  '`/addmeal <date> <type> <recipe>` — add a meal entry\n' +
+  '`/skip <date> <type>` — skip a planned meal\n' +
+  '`/eaten <date> <type>` — mark meal as consumed\n' +
+  '`/servings <date> <type> <n>` — update serving count\n' +
+  '`/generatemenu` — auto-generate lunch plan for the week\n\n' +
+  '*Pantry*\n' +
+  '`/pantry` — view pantry stock\n' +
+  '`/addpantry <name> <qty> <unit> [expiry:YYYY-MM-DD]` — add item\n' +
+  '`/removepantry <name>` — remove item\n' +
+  '`/setthreshold <name> <qty> <unit>` — set restock alert\n\n' +
+  '*Shopping*\n' +
+  '`/groceries` — show shopping list\n\n' +
+  '_You can also type naturally — e.g. "add 500g pasta" or "skip lunch tomorrow"._';
+
+const START_TEXT =
+  '👋 *PapiPap* — your kitchen assistant is running\\!\n\n' +
+  '*Recipes*\n' +
+  '📸 Send a cookbook photo to scan a recipe\n' +
+  '📋 /recipes — view saved recipes\n\n' +
+  '*Meal Planning*\n' +
+  '🗓 /plan \\[date\\] — view meal plan for a date\n' +
+  '➕ /addmeal \\<date\\> \\<type\\> \\<recipe\\> — add a meal\n' +
+  '⏭ /skip \\<date\\> \\<type\\> — skip a meal\n' +
+  '✅ /eaten \\<date\\> \\<type\\> — mark meal as eaten\n' +
+  '🍽 /servings \\<date\\> \\<type\\> \\<n\\> — change serving count\n\n' +
+  '*Pantry*\n' +
+  '📦 /pantry — pantry stock\n' +
+  '➕ /addpantry \\<name\\> \\<qty\\> \\<unit\\> — add item\n' +
+  '🔔 /setthreshold \\<name\\> \\<qty\\> \\<unit\\> — restock alert\n\n' +
+  '🛒 /groceries — shopping list\n' +
+  '🗓 /generatemenu — generate lunch plan for the week';
+
 export function registerCommandHandlers(bot: Telegraf<Context>): void {
+  bot.command('start', (ctx) => ctx.reply(START_TEXT, { parse_mode: 'MarkdownV2' }));
+
+  bot.command('help', (ctx) => ctx.reply(HELP_TEXT, { parse_mode: 'Markdown' }));
+
   bot.command('scan', (ctx) =>
     ctx.reply("📸 Send me a photo of a recipe page and I'll extract and save it for you."),
   );
@@ -163,7 +207,8 @@ export function registerCommandHandlers(bot: Telegraf<Context>): void {
       }
       const list = recipes
         .map((r, i) => {
-          const link = r.notionUrl ? `[${r.title}](${r.notionUrl})` : r.title;
+          const safeTitle = escapeMarkdown(r.title);
+          const link = r.notionUrl ? `[${safeTitle}](${r.notionUrl})` : safeTitle;
           return `${i + 1}. ${link}`;
         })
         .join('\n');
@@ -440,7 +485,8 @@ export function registerCommandHandlers(bot: Telegraf<Context>): void {
         return;
       }
       const lines = entries.map(
-        (e: MealEntry) => `• *${e.date}* (${e.mealType}): ${e.recipeTitle} ×${e.servings}`,
+        (e: MealEntry) =>
+          `• *${e.date}* (${e.mealType}): ${escapeMarkdown(e.recipeTitle)} ×${e.servings}`,
       );
       await ctx.reply(
         `🗓 *Lunch plan generated* (${entries.length} meal${entries.length !== 1 ? 's' : ''}):\n\n${lines.join('\n')}`,

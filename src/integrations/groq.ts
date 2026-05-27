@@ -68,8 +68,12 @@ export async function parseIntent(text: string): Promise<ParsedIntent> {
 
   try {
     const parsed = JSON.parse(raw) as ParsedIntent;
+    console.debug(`[groq] parseIntent resolved intent: ${parsed.intent}`);
     return parsed;
   } catch {
+    console.warn(
+      '[groq] parseIntent: could not parse model response as JSON — returning unknown intent',
+    );
     return { intent: 'unknown', params: {} };
   }
 }

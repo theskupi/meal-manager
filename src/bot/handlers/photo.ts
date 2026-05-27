@@ -2,6 +2,7 @@ import { Context } from 'telegraf';
 import { ExtractionError, NoRecipeFoundError } from '../../integrations/gemini';
 import { scanPhoto } from '../../services/recipe-scanner';
 import { saveRecipe } from '../../services/recipe-store';
+import { escapeMarkdown } from '../utils';
 
 export async function photoHandler(ctx: Context): Promise<void> {
   if (!ctx.message || !('photo' in ctx.message)) return;
@@ -18,7 +19,7 @@ export async function photoHandler(ctx: Context): Promise<void> {
       ctx.chat!.id,
       statusMsg.message_id,
       undefined,
-      `⏳ Found *${recipe.title}* — saving to Notion…`,
+      `⏳ Found *${escapeMarkdown(recipe.title)}* — saving to Notion…`,
       { parse_mode: 'Markdown' },
     );
 
@@ -26,7 +27,7 @@ export async function photoHandler(ctx: Context): Promise<void> {
 
     const ingredientList = recipe.ingredients
       .slice(0, 5)
-      .map((i) => `• ${i.quantity ?? '?'} ${i.unit} ${i.name}`)
+      .map((i) => `• ${i.quantity ?? '?'} ${i.unit} ${escapeMarkdown(i.name)}`)
       .join('\n');
     const more =
       recipe.ingredients.length > 5 ? `\n_…and ${recipe.ingredients.length - 5} more_` : '';
@@ -35,7 +36,7 @@ export async function photoHandler(ctx: Context): Promise<void> {
       ctx.chat!.id,
       statusMsg.message_id,
       undefined,
-      `✅ *${recipe.title}* saved!\n\n` +
+      `✅ *${escapeMarkdown(recipe.title)}* saved!\n\n` +
         `👥 Servings: ${recipe.servings}` +
         (recipe.prepTimeMinutes ? `  ⏱ ${recipe.prepTimeMinutes} min` : '') +
         `\n\n*Ingredients:*\n${ingredientList}${more}\n\n` +
