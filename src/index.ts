@@ -1,12 +1,14 @@
 import { config } from './config';
 import { bot, registerWebhook } from './integrations';
 import { authMiddleware } from './bot/middleware/auth';
+import { rateLimitMiddleware } from './bot/middleware/rate-limit';
 import { photoHandler } from './bot/handlers/photo';
 import { registerCommandHandlers } from './bot/handlers/command';
 import { queryHandler } from './bot/handlers/query';
 import { runDailyChecks } from './services/notifier';
 
 bot.use(authMiddleware);
+bot.use(rateLimitMiddleware);
 
 bot.command('ping', (ctx) => ctx.reply('pong 🏓'));
 

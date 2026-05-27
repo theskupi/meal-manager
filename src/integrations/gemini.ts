@@ -120,7 +120,6 @@ export async function extractRecipe(imageBase64: string): Promise<Recipe> {
     return flashRecipe;
   }
 
-  console.info('[gemini] Flash raw response:', flashRaw);
   throw new ExtractionError(
     `Flash model returned ${flashRecipe ? `only ${flashRecipe.ingredients.length} ingredient(s)` : 'an unparseable response'}.`,
   );

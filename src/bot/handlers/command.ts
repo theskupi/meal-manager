@@ -1,4 +1,5 @@
 import { Telegraf, Context } from 'telegraf';
+import { escapeMarkdown } from '../utils';
 import { listRecipes, findRecipeByTitle } from '../../services/recipe-store';
 import {
   upsertItem,
@@ -206,7 +207,8 @@ export function registerCommandHandlers(bot: Telegraf<Context>): void {
       }
       const list = recipes
         .map((r, i) => {
-          const link = r.notionUrl ? `[${r.title}](${r.notionUrl})` : r.title;
+          const safeTitle = escapeMarkdown(r.title);
+          const link = r.notionUrl ? `[${safeTitle}](${r.notionUrl})` : safeTitle;
           return `${i + 1}. ${link}`;
         })
         .join('\n');
@@ -483,7 +485,8 @@ export function registerCommandHandlers(bot: Telegraf<Context>): void {
         return;
       }
       const lines = entries.map(
-        (e: MealEntry) => `• *${e.date}* (${e.mealType}): ${e.recipeTitle} ×${e.servings}`,
+        (e: MealEntry) =>
+          `• *${e.date}* (${e.mealType}): ${escapeMarkdown(e.recipeTitle)} ×${e.servings}`,
       );
       await ctx.reply(
         `🗓 *Lunch plan generated* (${entries.length} meal${entries.length !== 1 ? 's' : ''}):\n\n${lines.join('\n')}`,
