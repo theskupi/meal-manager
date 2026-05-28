@@ -1,5 +1,5 @@
 import { Context } from 'telegraf';
-import { ExtractionError, NoRecipeFoundError } from '../../integrations/gemini';
+import { ExtractionError, NoRecipeFoundError, QuotaExceededError } from '../../integrations/gemini';
 import { scanPhoto, retryOnNetworkError } from '../../services/recipe-scanner';
 import { saveRecipe } from '../../services/recipe-store';
 import { escapeMarkdown } from '../utils';
@@ -66,6 +66,17 @@ export async function photoHandler(ctx: Context): Promise<void> {
           statusMsg.message_id,
           undefined,
           '⚠️ I found a recipe but had trouble reading it. Please try again or send a clearer photo.',
+        ),
+      );
+      return;
+    }
+    if (err instanceof QuotaExceededError) {
+      await retryOnNetworkError(() =>
+        ctx.telegram.editMessageText(
+          ctx.chat!.id,
+          statusMsg.message_id,
+          undefined,
+          '⏳ The AI service has reached its daily quota limit. Please try again tomorrow.',
         ),
       );
       return;

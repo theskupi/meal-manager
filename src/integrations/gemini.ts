@@ -14,6 +14,13 @@ export class NoRecipeFoundError extends Error {
   }
 }
 
+export class QuotaExceededError extends Error {
+  constructor() {
+    super('Gemini API quota exceeded');
+    this.name = 'QuotaExceededError';
+  }
+}
+
 export class ExtractionError extends Error {
   constructor(message: string) {
     super(message);
@@ -82,6 +89,7 @@ async function callModel(modelName: string, imageBase64: string): Promise<string
         await delay(backoffMs);
         continue;
       }
+      if (status === 429) throw new QuotaExceededError();
       throw err;
     }
   }

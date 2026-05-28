@@ -11,7 +11,54 @@ A personalized, AI-driven meal planning and inventory tracking system. This proj
 - **Chat-Based Interface:** Query the schedule ("What's for dinner tomorrow?"), adjust plans via natural language, or add ingredients directly through a mobile-friendly chat bot.
 - **Macro & Kcal Balancer (Nice-to-Have):** Integrates food composition APIs to calculate nutritional values and dynamically adjusts portion sizes to match daily caloric targets.
 
-## 🛠️ Tech Stack & Architecture
+## � Commands
+
+All commands are available as Telegram bot slash commands. You can also type naturally in any language — the AI intent parser will understand and route your request automatically.
+
+### Recipes
+
+| Command    | Description                     | Natural Language Example  |
+| ---------- | ------------------------------- | ------------------------- |
+| `/scan`    | Prompt to send a cookbook photo | _(send a photo directly)_ |
+| `/recipes` | List saved recipes              | "Show my recipes"         |
+
+### Meal Planning
+
+| Command                           | Description                           | Natural Language Example      |
+| --------------------------------- | ------------------------------------- | ----------------------------- |
+| `/plan [date]`                    | View meal plan (default: today)       | "What's for dinner tomorrow?" |
+| `/addmeal <date> <type> <recipe>` | Add a meal entry                      | —                             |
+| `/skip <date> <type>`             | Skip a planned meal                   | "Skip lunch tomorrow"         |
+| `/eaten <date> <type>`            | Mark meal as consumed                 | —                             |
+| `/servings <date> <type> <n>`     | Update serving count                  | —                             |
+| `/generatemenu`                   | Auto-generate lunch plan for the week | "Generate menu for next week" |
+
+### Pantry
+
+| Command                                              | Description                 | Natural Language Example   |
+| ---------------------------------------------------- | --------------------------- | -------------------------- |
+| `/pantry`                                            | View pantry stock           | "What's in the pantry?"    |
+| `/addpantry <name> <qty> <unit> [expiry:YYYY-MM-DD]` | Add/update pantry item      | "Added 500g pasta"         |
+| `/removepantry <name>`                               | Remove item from pantry     | "Remove pasta from pantry" |
+| `/setthreshold <name> <qty> <unit>`                  | Set restock alert threshold | —                          |
+
+### Shopping
+
+| Command      | Description        | Natural Language Example |
+| ------------ | ------------------ | ------------------------ |
+| `/groceries` | Show shopping list | "What do I need to buy?" |
+
+### Utility
+
+| Command  | Description                      |
+| -------- | -------------------------------- |
+| `/start` | Show welcome message             |
+| `/help`  | Show all available commands      |
+| `/ping`  | Health check (replies "pong 🏓") |
+
+> **💡 Natural Language:** You can type in any language (e.g. Czech, English, Slovak). The AI will parse your intent and extract parameters automatically — dates, quantities, units, and item names are all resolved intelligently.
+
+## �🛠️ Tech Stack & Architecture
 
 - **Backend:** Node.js with TypeScript
 - **User Interface & Dashboard:** Notion (serving as a shared family database, calendar, and visual recipe gallery via the Notion API)
